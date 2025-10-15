@@ -1,0 +1,20 @@
+{
+  "name": "recipflash-monorepo",
+  "private": true,
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+  },
+  "devDependencies": {
+    "prettier": "^3.2.5",
+    "turbo": "^2.0.4"
+  },
+  "packageManager": "pnpm@9.4.0",
+  "engines": {
+    "node": ">=18",
+    "npm": "Please use pnpm instead.",
+    "yarn": "Please use pnpm instead."
+  }
+}
