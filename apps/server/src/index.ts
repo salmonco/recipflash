@@ -46,6 +46,30 @@ const appRouter = t.router({
         return { success: false, error: message };
       }
     }),
+
+  updateMenu: t.procedure
+    .input(z.object({
+      id: z.number(),
+      name: z.string().optional(),
+      ingredients: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const { id, name, ingredients } = input;
+      try {
+        const updatedMenu = await prisma.menu.update({
+          where: { id },
+          data: {
+            ...(name && { name }),
+            ...(ingredients && { ingredients }),
+          },
+        });
+        return { success: true, menu: updatedMenu };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Error updating menu item:', message);
+        return { success: false, error: message };
+      }
+    }),
 });
 
 export type AppRouter = typeof appRouter;

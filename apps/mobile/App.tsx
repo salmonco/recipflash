@@ -1,17 +1,22 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { httpBatchLink } from '@trpc/client';
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
+  Button,
+  Modal,
   SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   useColorScheme,
   View,
-  Button,
-  ActivityIndicator,
-  Alert,
 } from 'react-native';
 import DocumentPicker, { types } from 'react-native-document-picker';
+import { trpc } from './src/trpc';
 
 // Define the type for a single menu item
 interface Menu {
@@ -27,11 +32,26 @@ interface Recipe {
   menus: Menu[];
 }
 
-function App(): React.JSX.Element {
+const queryClient = new QueryClient();
+const trpcClient = trpc.createClient({
+  links: [
+    httpBatchLink({
+      url: 'http://localhost:4000/trpc', // Adjust to your backend URL
+    }),
+  ],
+});
+
+function AppContent(): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // State for editing
+  const [isEditingModalVisible, setIsEditingModalVisible] = useState(false);
+  const [editingMenuId, setEditingMenuId] = useState<number | null>(null);
+  const [editingMenuName, setEditingMenuName] = useState('');
+  const [editingMenuIngredients, setEditingMenuIngredients] = useState('');
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? '#333' : '#F3F3F3',
@@ -91,13 +111,68 @@ function App(): React.JSX.Element {
     }
   };
 
+  const handleEditPress = (menu: Menu) => {
+    setEditingMenuId(menu.id);
+    setEditingMenuName(menu.name);
+    setEditingMenuIngredients(menu.ingredients);
+    setIsEditingModalVisible(true);
+  };
+
+  const handleUpdateMenu = async () => {
+    if (editingMenuId === null) {
+      Alert.alert('Error', 'No menu selected for editing.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await trpcClient.updateMenu.mutate({
+        id: editingMenuId,
+        name: editingMenuName,
+        ingredients: editingMenuIngredients,
+      });
+
+      if (result.success) {
+        Alert.alert('Success', 'Menu item updated successfully!');
+        // Update the local recipe state
+        setRecipe(prevRecipe => {
+          if (!prevRecipe) return null;
+          return {
+            ...prevRecipe,
+            menus: prevRecipe.menus.map(menu =>
+              menu.id === editingMenuId
+                ? {
+                    ...menu,
+                    name: editingMenuName,
+                    ingredients: editingMenuIngredients,
+                  }
+                : menu,
+            ),
+          };
+        });
+        setIsEditingModalVisible(false);
+      } else {
+        throw new Error('Failed to update menu item.');
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'An unknown error occurred';
+      setError(message);
+      Alert.alert('Error', message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={backgroundStyle}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       <View style={styles.container}>
         <Text style={styles.title}>Recipflash</Text>
         <Text style={styles.subtitle}>
-          Upload a recipe PDF to generate flashcards automatically.
+          Upload a recipe PDF to generate menus automatically.
         </Text>
 
         <View style={styles.buttonContainer}>
@@ -112,7 +187,7 @@ function App(): React.JSX.Element {
           <View style={styles.statusContainer}>
             <ActivityIndicator size="large" />
             <Text style={styles.statusText}>
-              Processing PDF and generating cards...
+              Processing PDF and generating menus...
             </Text>
           </View>
         )}
@@ -128,12 +203,51 @@ function App(): React.JSX.Element {
             {recipe.menus.map((menu, index) => (
               <View key={menu.id} style={styles.card}>
                 <Text style={styles.cardIndex}>{index + 1}</Text>
-                <Text style={styles.cardFront}>{menu.name}</Text>
-                <Text style={styles.cardBack}>{menu.ingredients}</Text>
+                <Text style={styles.cardName}>{menu.name}</Text>
+                <Text style={styles.cardIngredients}>{menu.ingredients}</Text>
+                <Button title="Edit" onPress={() => handleEditPress(menu)} />
               </View>
             ))}
           </ScrollView>
         )}
+
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={isEditingModalVisible}
+          onRequestClose={() => setIsEditingModalVisible(false)}
+        >
+          <View style={styles.centeredView}>
+            <View style={styles.modalView}>
+              <Text style={styles.modalTitle}>Edit Menu Item</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Menu Name"
+                value={editingMenuName}
+                onChangeText={setEditingMenuName}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Ingredients"
+                value={editingMenuIngredients}
+                onChangeText={setEditingMenuIngredients}
+                multiline
+              />
+              <View style={styles.modalButtonContainer}>
+                <Button
+                  title="Save"
+                  onPress={handleUpdateMenu}
+                  disabled={isLoading}
+                />
+                <Button
+                  title="Cancel"
+                  onPress={() => setIsEditingModalVisible(false)}
+                  disabled={isLoading}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     </SafeAreaView>
   );
@@ -201,15 +315,67 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#CCC',
   },
-  cardFront: {
+  cardName: {
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 8,
   },
-  cardBack: {
+  cardIngredients: {
     fontSize: 16,
     color: '#555',
   },
+  centeredView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 22,
+  },
+  modalView: {
+    margin: 20,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 35,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    marginBottom: 15,
+    textAlign: 'center',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  input: {
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    marginBottom: 10,
+    paddingHorizontal: 10,
+    width: 250,
+    borderRadius: 5,
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    marginTop: 10,
+  },
 });
+
+function App(): React.JSX.Element {
+  return (
+    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <AppContent />
+      </QueryClientProvider>
+    </trpc.Provider>
+  );
+}
 
 export default App;
