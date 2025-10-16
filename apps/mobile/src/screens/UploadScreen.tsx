@@ -1,5 +1,4 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -12,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import DocumentPicker, { types } from 'react-native-document-picker';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Recipe } from '../models/Recipe';
 
 type RootStackParamList = {
@@ -24,7 +24,6 @@ type UploadScreenProps = NativeStackScreenProps<RootStackParamList, 'Upload'>;
 
 function UploadScreen({ navigation }: UploadScreenProps): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
-  const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +34,6 @@ function UploadScreen({ navigation }: UploadScreenProps): React.JSX.Element {
 
   const handleUpload = async () => {
     setError(null);
-    setRecipe(null);
     setIsLoading(true);
 
     try {
@@ -70,10 +68,11 @@ function UploadScreen({ navigation }: UploadScreenProps): React.JSX.Element {
       }
 
       const result: Recipe = await response.json();
-      setRecipe(result);
       Alert.alert('Success', 'Recipe uploaded and menus generated!');
-      // Optionally navigate to the recipe list or menu list after upload
-      // navigation.navigate('MenuList', { recipeId: result.id, recipeTitle: result.title });
+      navigation.navigate('MenuList', {
+        recipeId: result.id,
+        recipeTitle: result.title,
+      }); // Navigate back to RecipeList after successful upload
     } catch (err) {
       if (DocumentPicker.isCancel(err)) {
         // User cancelled the picker
@@ -104,11 +103,6 @@ function UploadScreen({ navigation }: UploadScreenProps): React.JSX.Element {
             onPress={handleUpload}
             disabled={isLoading}
           />
-          <Button
-            title="View All Recipes"
-            onPress={() => navigation.navigate('RecipeList')}
-            disabled={isLoading}
-          />
         </View>
 
         {isLoading && (
@@ -123,21 +117,6 @@ function UploadScreen({ navigation }: UploadScreenProps): React.JSX.Element {
         {error && (
           <View style={styles.statusContainer}>
             <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
-
-        {recipe && (
-          <View style={styles.statusContainer}>
-            <Text style={styles.statusText}>Recipe uploaded successfully!</Text>
-            <Button
-              title="View Menus for this Recipe"
-              onPress={() =>
-                navigation.navigate('MenuList', {
-                  recipeId: recipe.id,
-                  recipeTitle: recipe.title,
-                })
-              }
-            />
           </View>
         )}
       </View>

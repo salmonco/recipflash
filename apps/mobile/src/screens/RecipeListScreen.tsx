@@ -1,8 +1,9 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import React from 'react';
 import {
   ActivityIndicator,
+  Button,
   FlatList,
   Pressable,
   StatusBar,
@@ -11,11 +12,13 @@ import {
   useColorScheme,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { trpc } from '../trpc';
 
 type RootStackParamList = {
   RecipeList: undefined;
   MenuList: { recipeId: number; recipeTitle: string };
+  Upload: undefined; // Add Upload screen to RootStackParamList
 };
 
 type RecipeListScreenProps = NativeStackScreenProps<
@@ -27,7 +30,14 @@ function RecipeListScreen({
   navigation,
 }: RecipeListScreenProps): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
-  const { data, isLoading, error } = trpc.getAllRecipes.useQuery();
+  const { data, isLoading, error, refetch } = trpc.getAllRecipes.useQuery();
+
+  // Refetch data when the screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      refetch();
+    }, [refetch]),
+  );
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? '#333' : '#F3F3F3',
@@ -61,12 +71,15 @@ function RecipeListScreen({
     );
   }
 
+  const hasRecipes = data.recipes && data.recipes.length > 0;
+
   return (
     <SafeAreaView style={backgroundStyle}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       <View style={styles.container}>
         <Text style={styles.title}>Recipes</Text>
-        {data.recipes && data.recipes.length > 0 ? (
+
+        {hasRecipes ? (
           <FlatList
             data={data.recipes}
             keyExtractor={item => item.id.toString()}
@@ -88,10 +101,22 @@ function RecipeListScreen({
             )}
           />
         ) : (
-          <Text style={styles.noRecipesText}>
-            No recipes found. Upload one!
-          </Text>
+          <View style={styles.noRecipesContainer}>
+            <Text style={styles.noRecipesText}>No recipes found.</Text>
+            <Button
+              title="Upload New Recipe"
+              onPress={() => navigation.navigate('Upload')}
+            />
+          </View>
         )}
+
+        {/* Floating Action Button */}
+        <Pressable
+          style={styles.fab}
+          onPress={() => navigation.navigate('Upload')}
+        >
+          <Text style={styles.fabText}>+</Text>
+        </Pressable>
       </View>
     </SafeAreaView>
   );
@@ -143,11 +168,33 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 4,
   },
+  noRecipesContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 50,
+  },
   noRecipesText: {
     fontSize: 16,
     textAlign: 'center',
-    marginTop: 50,
+    marginBottom: 20,
     color: '#666',
+  },
+  fab: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    right: 20,
+    bottom: 20,
+    backgroundColor: '#03A9F4',
+    borderRadius: 28,
+    elevation: 8,
+  },
+  fabText: {
+    fontSize: 24,
+    color: 'white',
   },
 });
 

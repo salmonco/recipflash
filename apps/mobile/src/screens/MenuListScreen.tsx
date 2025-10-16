@@ -1,5 +1,4 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -14,6 +13,7 @@ import {
   useColorScheme,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Menu } from '../models/Menu';
 import { trpc } from '../trpc';
 

@@ -33,16 +33,16 @@ function App(): React.JSX.Element {
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         <NavigationContainer>
-          <Stack.Navigator initialRouteName="Upload">
-            <Stack.Screen
-              name="Upload"
-              component={UploadScreen}
-              options={{ title: 'Upload Recipe' }}
-            />
+          <Stack.Navigator initialRouteName="RecipeList">
             <Stack.Screen
               name="RecipeList"
               component={RecipeListScreen}
               options={{ title: 'All Recipes' }}
+            />
+            <Stack.Screen
+              name="Upload"
+              component={UploadScreen}
+              options={{ title: 'Upload Recipe' }}
             />
             <Stack.Screen
               name="MenuList"
