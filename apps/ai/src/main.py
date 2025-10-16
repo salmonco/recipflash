@@ -116,13 +116,13 @@ def parse_llm_response_to_menus(llm_output: str) -> List[Menu]:
                         processed_item[new_key] = value
 
                     if "name" in processed_item and "ingredients" in processed_item:
-                        flashcards_list.append(Flashcard(name=processed_item["name"], ingredients=processed_item["ingredients"]))
+                        menus_list.append(Menu(name=processed_item["name"], ingredients=processed_item["ingredients"]))
             if menus_list:
                 return menus_list
     except json.JSONDecodeError:
         pass
 
-    raise ValueError(f"Failed to extract and parse any valid flashcards from LLM output. Raw output: {llm_output}")
+    raise ValueError(f"Failed to extract and parse any valid menus from LLM output. Raw output: {llm_output}")
 
 # --- Language Translation Helper ---
 # In a real-world scenario, you might use a dedicated translation API
@@ -158,20 +158,18 @@ async def translate_menus_to_korean(menus: List[Menu]) -> List[Menu]:
     return translated_menus
 
 # --- Helper function to extract text from PDF ---
-def extract_text_from_pdf(file_content: bytes) -> str:
+def extract_text_from_pdf(file_content: bytes) -> List[str]:
     try:
         reader = PyPDF2.PdfReader(io.BytesIO(file_content))
-        text = ""
+        text_list = []
         for page_num in range(len(reader.pages)):
-            text += reader.pages[page_num].extract_text() or ""
-        return text
+            text_list.append(reader.pages[page_num].extract_text() or "")
+        return text_list
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to extract text from PDF: {e}")
 
 # --- Helper function to generate menus from text ---
-async def generate_menus_from_text_util(recipe_text: str) -> MenuResponse:
-    print(f"recipe_text: {recipe_text}")  # Debugging output
-
+async def generate_menus_from_text(recipe_text: str) -> MenuResponse:
     if not recipe_text.strip():
         raise HTTPException(status_code=400, detail="No text provided for menu generation.")
 
@@ -211,8 +209,19 @@ JSON 응답:
 
     return MenuResponse(menus=translated_menus)
 
-# --- API Endpoints ---
+async def generate_menus_from_text_util(recipe_text_list: List[str]) -> MenuResponse:
+    # recipe_text_list를 순회하며 각 텍스트를 개별적으로 처리 후 결과를 합침
+    all_menus = []
+    # 해당 text가 배열에서 몇 번째인지 출력
+    for i, recipe_text in enumerate(recipe_text_list):
+        print(f"recipe_text[{i}]: {recipe_text}")  # Debugging output
 
+        menu_response = await generate_menus_from_text(recipe_text)
+        all_menus.extend(menu_response.menus)
+
+    return MenuResponse(menus=all_menus)
+
+# --- API Endpoints ---
 @app.get("/")
 def read_root():
     """Root endpoint to check if the server is running."""
@@ -226,12 +235,11 @@ async def generate_menus(file: UploadFile = File(...)):
 
     try:
         file_content = await file.read()
-        recipe_text = extract_text_from_pdf(file_content)
+        text_list = extract_text_from_pdf(file_content)
 
-        if not recipe_text.strip():
-            raise HTTPException(status_code=400, detail="No text found in the PDF.")
+        print(f"page count: {len(text_list)}")  # Debugging output
 
-        return await generate_menus_from_text_util(recipe_text)
+        return await generate_menus_from_text_util(text_list)
 
     except HTTPException as e:
         raise e
