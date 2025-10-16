@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+langchain
+langchain-community
+ollama
+python-dotenv
+PyPDF2
+python-multipart
+langchain-ollama

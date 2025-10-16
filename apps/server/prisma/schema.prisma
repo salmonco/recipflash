@@ -18,5 +18,14 @@ model Recipe {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
   title     String
-  content   String?
+  cards     Flashcard[]
+}
+
+model Flashcard {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  front     String
+  back      String
+  recipe    Recipe   @relation(fields: [recipeId], references: [id])
+  recipeId  Int
 }

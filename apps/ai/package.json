@@ -1,0 +1,8 @@
+{
+  "name": "@recipflash/ai",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "./venv/bin/uvicorn src.main:app --reload --port 8000"
+  }
+}
