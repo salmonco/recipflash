@@ -1,5 +1,6 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -15,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Menu } from '../models/Menu';
-import { trpc } from '../trpc';
+import { SuccessRecipeResponse, trpc } from '../trpc';
 
 type RootStackParamList = {
   RecipeList: undefined;
@@ -27,12 +28,18 @@ type MenuListScreenProps = NativeStackScreenProps<
   'MenuList'
 >;
 
+// Type predicate function
+function isSuccessRecipeResponse(data: any): data is SuccessRecipeResponse {
+  return data && data.success === true && data.recipe !== undefined;
+}
+
 function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
   const { recipeId, recipeTitle } = route.params;
   const isDarkMode = useColorScheme() === 'dark';
   const { data, isLoading, error, refetch } = trpc.getRecipeById.useQuery({
     id: recipeId,
   });
+  const utils = trpc.useUtils();
 
   // State for editing
   const [isEditingModalVisible, setIsEditingModalVisible] = useState(false);
@@ -41,11 +48,19 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
   const [editingMenuIngredients, setEditingMenuIngredients] = useState('');
 
   const updateMenuMutation = trpc.updateMenu.useMutation();
+  const deleteMenuMutation = trpc.deleteMenu.useMutation();
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? '#333' : '#F3F3F3',
     flex: 1,
   };
+
+  // Refetch data when the screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch]),
+  );
 
   const handleEditPress = (menu: Menu) => {
     setEditingMenuId(menu.id);
@@ -69,16 +84,81 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
 
       if (result.success) {
         Alert.alert('Success', 'Menu item updated successfully!');
-        refetch(); // Refetch the recipe to get updated menus
+        // Update the cache directly
+        utils.getRecipeById.setData({ id: recipeId }, oldData => {
+          if (!isSuccessRecipeResponse(oldData)) return oldData;
+          return {
+            ...oldData,
+            recipe: {
+              ...oldData.recipe,
+              menus: oldData.recipe.menus.map(menu =>
+                menu.id === editingMenuId
+                  ? {
+                      ...menu,
+                      name: editingMenuName,
+                      ingredients: editingMenuIngredients,
+                    }
+                  : menu,
+              ),
+            },
+          };
+        });
+        // No need to call refetch() here as cache is updated
         setIsEditingModalVisible(false);
       } else {
-        throw new Error('Failed to update menu item.');
+        throw new Error(result.error || 'Failed to update menu item.');
       }
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'An unknown error occurred';
       Alert.alert('Error', message);
     }
+  };
+
+  const handleDeleteMenu = (menuId: number) => {
+    Alert.alert(
+      'Delete Menu',
+      'Are you sure you want to delete this menu item?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const result = await deleteMenuMutation.mutateAsync({
+                id: menuId,
+              });
+              if (result.success) {
+                Alert.alert('Success', 'Menu item deleted successfully!');
+                // Update the cache directly
+                utils.getRecipeById.setData({ id: recipeId }, oldData => {
+                  if (!isSuccessRecipeResponse(oldData)) return oldData;
+                  return {
+                    ...oldData,
+                    recipe: {
+                      ...oldData.recipe,
+                      menus: oldData.recipe.menus.filter(
+                        menu => menu.id !== menuId,
+                      ),
+                    },
+                  };
+                });
+                // No need to call refetch() here as cache is updated
+              } else {
+                throw new Error(result.error || 'Failed to delete menu item.');
+              }
+            } catch (err) {
+              const message =
+                err instanceof Error
+                  ? err.message
+                  : 'An unknown error occurred';
+              Alert.alert('Error', message);
+            }
+          },
+        },
+      ],
+    );
   };
 
   if (isLoading) {
@@ -118,10 +198,17 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
             data={data.recipe.menus}
             keyExtractor={item => item.id.toString()}
             renderItem={({ item }) => (
-              <View key={item.id} style={styles.card}>
+              <View style={styles.card}>
                 <Text style={styles.cardName}>{item.name}</Text>
                 <Text style={styles.cardIngredients}>{item.ingredients}</Text>
-                <Button title="Edit" onPress={() => handleEditPress(item)} />
+                <View style={styles.menuActions}>
+                  <Button title="Edit" onPress={() => handleEditPress(item)} />
+                  <Button
+                    title="Delete"
+                    onPress={() => handleDeleteMenu(item.id)}
+                    color="red"
+                  />
+                </View>
               </View>
             )}
           />
@@ -209,6 +296,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.22,
     shadowRadius: 2.22,
     elevation: 3,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   cardName: {
     fontSize: 16,
@@ -218,6 +308,10 @@ const styles = StyleSheet.create({
   cardIngredients: {
     fontSize: 16,
     color: '#555',
+  },
+  menuActions: {
+    flexDirection: 'row',
+    gap: 5,
   },
   noMenusText: {
     fontSize: 16,

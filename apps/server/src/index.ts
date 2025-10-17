@@ -22,17 +22,38 @@ interface ErrorResponse {
 
 interface SuccessRecipesResponse {
   success: true;
-  recipes: { id: number; title: string; menus: { id: number; name: string; ingredients: string }[] }[];
+  recipes: {
+    id: number;
+    title: string;
+    menus: { id: number; name: string; ingredients: string }[];
+  }[];
 }
 
 interface SuccessRecipeResponse {
   success: true;
-  recipe: { id: number; title: string; menus: { id: number; name: string; ingredients: string }[] };
+  recipe: {
+    id: number;
+    title: string;
+    menus: { id: number; name: string; ingredients: string }[];
+  };
 }
 
 interface SuccessUpdateMenuResponse {
   success: true;
   menu: { id: number; name: string; ingredients: string };
+}
+
+interface SuccessUpdateRecipeTitleResponse {
+  success: true;
+  recipe: {
+    id: number;
+    title: string;
+    menus: { id: number; name: string; ingredients: string }[];
+  };
+}
+
+interface SuccessDeleteResponse {
+  success: true;
 }
 
 // --- TRPC, LangChain, Prisma, Multer Setup ---
@@ -51,85 +72,163 @@ const appRouter = t.router({
 
   getAiRecipe: t.procedure
     .input(z.object({ topic: z.string() }))
-    .query(async ({ input }): Promise<SuccessAiRecipeResponse | ErrorResponse> => {
-      try {
-        const llm = new ChatOllama({
-          model: "llama3",
-          baseUrl: "http://localhost:11434",
-        });
-        const prompt = ChatPromptTemplate.fromMessages([
-          ["system", "You are an expert chef."],
-          ["human", "Give a simple and short recipe idea about {topic}."],
-        ]);
-        const outputParser = new StringOutputParser();
-        const chain = prompt.pipe(llm).pipe(outputParser);
-        const result = await chain.invoke({ topic: input.topic });
-        return { success: true, recipe: result.trim() };
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Unknown error";
-        console.error("Error calling LangChain/Ollama:", message);
-        return { success: false, error: message };
+    .query(
+      async ({ input }): Promise<SuccessAiRecipeResponse | ErrorResponse> => {
+        try {
+          const llm = new ChatOllama({
+            model: "llama3",
+            baseUrl: "http://localhost:11434",
+          });
+          const prompt = ChatPromptTemplate.fromMessages([
+            ["system", "You are an expert chef."],
+            ["human", "Give a simple and short recipe idea about {topic}."],
+          ]);
+          const outputParser = new StringOutputParser();
+          const chain = prompt.pipe(llm).pipe(outputParser);
+          const result = await chain.invoke({ topic: input.topic });
+          return { success: true, recipe: result.trim() };
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : "Unknown error";
+          console.error("Error calling LangChain/Ollama:", message);
+          return { success: false, error: message };
+        }
       }
-    }),
+    ),
 
   updateMenu: t.procedure
-    .input(z.object({
-      id: z.number(),
-      name: z.string().optional(),
-      ingredients: z.string().optional(),
-    }))
-    .mutation(async ({ input }): Promise<SuccessUpdateMenuResponse | ErrorResponse> => {
-      const { id, name, ingredients } = input;
-      try {
-        const updatedMenu = await prisma.menu.update({
-          where: { id },
-          data: {
-            ...(name && { name }),
-            ...(ingredients && { ingredients }),
-          },
-        });
-        return { success: true, menu: updatedMenu };
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('Error updating menu item:', message);
-        return { success: false, error: message };
+    .input(
+      z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        ingredients: z.string().optional(),
+      })
+    )
+    .mutation(
+      async ({ input }): Promise<SuccessUpdateMenuResponse | ErrorResponse> => {
+        const { id, name, ingredients } = input;
+        try {
+          const updatedMenu = await prisma.menu.update({
+            where: { id },
+            data: {
+              ...(name && { name }),
+              ...(ingredients && { ingredients }),
+            },
+          });
+          return { success: true, menu: updatedMenu };
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : "Unknown error";
+          console.error("Error updating menu item:", message);
+          return { success: false, error: message };
+        }
       }
-    }),
+    ),
 
-  getAllRecipes: t.procedure
-    .query(async (): Promise<SuccessRecipesResponse | ErrorResponse> => {
+  getAllRecipes: t.procedure.query(
+    async (): Promise<SuccessRecipesResponse | ErrorResponse> => {
       try {
         const recipes = await prisma.recipe.findMany({
           include: { menus: true }, // Include associated menus
         });
         return { success: true, recipes };
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('Error fetching all recipes:', message);
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
+        console.error("Error fetching all recipes:", message);
         return { success: false, error: message };
       }
-    }),
+    }
+  ),
 
   getRecipeById: t.procedure
     .input(z.object({ id: z.number() }))
-    .query(async ({ input }): Promise<SuccessRecipeResponse | ErrorResponse> => {
-      const { id } = input;
-      try {
-        const recipe = await prisma.recipe.findUnique({
-          where: { id },
-          include: { menus: true }, // Include associated menus
-        });
-        if (!recipe) {
-          return { success: false, error: 'Recipe not found.' };
+    .query(
+      async ({ input }): Promise<SuccessRecipeResponse | ErrorResponse> => {
+        const { id } = input;
+        try {
+          const recipe = await prisma.recipe.findUnique({
+            where: { id },
+            include: { menus: true }, // Include associated menus
+          });
+          if (!recipe) {
+            return { success: false, error: "Recipe not found." };
+          }
+          return { success: true, recipe };
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : "Unknown error";
+          console.error("Error fetching recipe by ID:", message);
+          return { success: false, error: message };
         }
-        return { success: true, recipe };
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('Error fetching recipe by ID:', message);
-        return { success: false, error: message };
       }
-    }),
+    ),
+
+  updateRecipeTitle: t.procedure
+    .input(
+      z.object({
+        id: z.number(),
+        title: z.string(),
+      })
+    )
+    .mutation(
+      async ({
+        input,
+      }): Promise<SuccessUpdateRecipeTitleResponse | ErrorResponse> => {
+        const { id, title } = input;
+        try {
+          const updatedRecipe = await prisma.recipe.update({
+            where: { id },
+            data: { title },
+            include: { menus: true }, // Add this line
+          });
+          return { success: true, recipe: updatedRecipe };
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : "Unknown error";
+          console.error("Error updating recipe title:", message);
+          return { success: false, error: message };
+        }
+      }
+    ),
+
+  deleteRecipe: t.procedure
+    .input(z.object({ id: z.number() }))
+    .mutation(
+      async ({ input }): Promise<SuccessDeleteResponse | ErrorResponse> => {
+        const { id } = input;
+        try {
+          await prisma.recipe.delete({
+            where: { id },
+          });
+          return { success: true };
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : "Unknown error";
+          console.error("Error deleting recipe:", message);
+          return { success: false, error: message };
+        }
+      }
+    ),
+
+  deleteMenu: t.procedure
+    .input(z.object({ id: z.number() }))
+    .mutation(
+      async ({ input }): Promise<SuccessDeleteResponse | ErrorResponse> => {
+        const { id } = input;
+        try {
+          await prisma.menu.delete({
+            where: { id },
+          });
+          return { success: true };
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : "Unknown error";
+          console.error("Error deleting menu item:", message);
+          return { success: false, error: message };
+        }
+      }
+    ),
 });
 
 export type AppRouter = typeof appRouter;
@@ -177,9 +276,23 @@ app.post("/upload-recipe", upload.single("recipe"), async (req, res) => {
 
     // 2. Save to database in a transaction
     const newRecipe = await prisma.$transaction(async (tx) => {
+      let recipeTitle = req.file?.originalname;
+
+      if (!recipeTitle) {
+        // Generate a default title if originalname is not available
+        const recipeCount = await tx.recipe.count();
+        recipeTitle = `레시피 모음 ${recipeCount + 1}`;
+      } else {
+        // Remove file extension for a cleaner title
+        const lastDotIndex = recipeTitle.lastIndexOf(".");
+        if (lastDotIndex > 0) {
+          recipeTitle = recipeTitle.substring(0, lastDotIndex);
+        }
+      }
+
       const recipe = await tx.recipe.create({
         data: {
-          title: req.file?.originalname || "Untitled Recipe",
+          title: recipeTitle,
         },
       });
 

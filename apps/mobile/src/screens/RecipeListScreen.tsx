@@ -1,24 +1,28 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Button,
   FlatList,
+  Modal,
   Pressable,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   useColorScheme,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { trpc } from '../trpc';
+import { Recipe } from '../models/Recipe';
+import { SuccessRecipesResponse, trpc } from '../trpc';
 
 type RootStackParamList = {
   RecipeList: undefined;
   MenuList: { recipeId: number; recipeTitle: string };
-  Upload: undefined; // Add Upload screen to RootStackParamList
+  Upload: undefined;
 };
 
 type RecipeListScreenProps = NativeStackScreenProps<
@@ -26,22 +30,126 @@ type RecipeListScreenProps = NativeStackScreenProps<
   'RecipeList'
 >;
 
+// Type predicate function
+function isSuccessRecipesResponse(data: any): data is SuccessRecipesResponse {
+  return data && data.success === true && Array.isArray(data.recipes);
+}
+
 function RecipeListScreen({
   navigation,
 }: RecipeListScreenProps): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
   const { data, isLoading, error, refetch } = trpc.getAllRecipes.useQuery();
+  const utils = trpc.useUtils();
 
-  // Refetch data when the screen comes into focus
-  useFocusEffect(
-    React.useCallback(() => {
-      refetch();
-    }, [refetch]),
-  );
+  // State for editing recipe title
+  const [
+    isEditingRecipeTitleModalVisible,
+    setIsEditingRecipeTitleModalVisible,
+  ] = useState(false);
+  const [editingRecipeId, setEditingRecipeId] = useState<number | null>(null);
+  const [editingRecipeTitle, setEditingRecipeTitle] = useState('');
+
+  const updateRecipeTitleMutation = trpc.updateRecipeTitle.useMutation();
+  const deleteRecipeMutation = trpc.deleteRecipe.useMutation();
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? '#333' : '#F3F3F3',
     flex: 1,
+  };
+
+  // Refetch data when the screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch]),
+  );
+
+  const handleEditRecipeTitlePress = (recipe: Recipe) => {
+    setEditingRecipeId(recipe.id);
+    setEditingRecipeTitle(recipe.title);
+    setIsEditingRecipeTitleModalVisible(true);
+  };
+
+  const handleUpdateRecipeTitle = async () => {
+    if (editingRecipeId === null) {
+      Alert.alert('Error', 'No recipe selected for editing.');
+      return;
+    }
+
+    try {
+      const result = await updateRecipeTitleMutation.mutateAsync({
+        id: editingRecipeId,
+        title: editingRecipeTitle,
+      });
+
+      if (result.success) {
+        Alert.alert('Success', 'Recipe title updated successfully!');
+
+        // Update the cache directly
+        utils.getAllRecipes.setData(undefined, oldData => {
+          if (!isSuccessRecipesResponse(oldData)) return oldData;
+          return {
+            ...oldData,
+            recipes: oldData.recipes.map(recipe =>
+              recipe.id === editingRecipeId
+                ? { ...recipe, title: editingRecipeTitle }
+                : recipe,
+            ),
+          };
+        });
+        // No need to call refetch() here as cache is updated
+        setIsEditingRecipeTitleModalVisible(false);
+      } else {
+        throw new Error(result.error || 'Failed to update recipe title.');
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'An unknown error occurred';
+      Alert.alert('Error', message);
+    }
+  };
+
+  const handleDeleteRecipe = (recipeId: number) => {
+    Alert.alert(
+      'Delete Recipe',
+      'Are you sure you want to delete this recipe and all its menus?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const result = await deleteRecipeMutation.mutateAsync({
+                id: recipeId,
+              });
+              if (result.success) {
+                Alert.alert('Success', 'Recipe deleted successfully!');
+                // Update the cache directly
+                utils.getAllRecipes.setData(undefined, oldData => {
+                  if (!isSuccessRecipesResponse(oldData)) return oldData;
+                  return {
+                    ...oldData,
+                    recipes: oldData.recipes.filter(
+                      recipe => recipe.id !== recipeId,
+                    ),
+                  };
+                });
+              } else {
+                throw new Error(result.error || 'Failed to delete recipe.');
+              }
+            } catch (err) {
+              const message =
+                err instanceof Error
+                  ? err.message
+                  : 'An unknown error occurred';
+              Alert.alert('Error', message);
+            }
+          },
+        },
+      ],
+    );
   };
 
   if (isLoading) {
@@ -84,20 +192,33 @@ function RecipeListScreen({
             data={data.recipes}
             keyExtractor={item => item.id.toString()}
             renderItem={({ item }) => (
-              <Pressable
-                style={styles.recipeItem}
-                onPress={() =>
-                  navigation.navigate('MenuList', {
-                    recipeId: item.id,
-                    recipeTitle: item.title,
-                  })
-                }
-              >
-                <Text style={styles.recipeTitle}>{item.title}</Text>
-                <Text style={styles.recipeMenuCount}>
-                  {item.menus.length} menus
-                </Text>
-              </Pressable>
+              <View style={styles.recipeItem}>
+                <Pressable
+                  style={styles.recipeTitleContainer}
+                  onPress={() =>
+                    navigation.navigate('MenuList', {
+                      recipeId: item.id,
+                      recipeTitle: item.title,
+                    })
+                  }
+                >
+                  <Text style={styles.recipeTitle}>{item.title}</Text>
+                  <Text style={styles.recipeMenuCount}>
+                    {item.menus.length} menus
+                  </Text>
+                </Pressable>
+                <View style={styles.recipeActions}>
+                  <Button
+                    title="Edit"
+                    onPress={() => handleEditRecipeTitlePress(item)}
+                  />
+                  <Button
+                    title="Delete"
+                    onPress={() => handleDeleteRecipe(item.id)}
+                    color="red"
+                  />
+                </View>
+              </View>
             )}
           />
         ) : (
@@ -117,6 +238,38 @@ function RecipeListScreen({
         >
           <Text style={styles.fabText}>+</Text>
         </Pressable>
+
+        {/* Edit Recipe Title Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={isEditingRecipeTitleModalVisible}
+          onRequestClose={() => setIsEditingRecipeTitleModalVisible(false)}
+        >
+          <View style={styles.centeredView}>
+            <View style={styles.modalView}>
+              <Text style={styles.modalTitle}>Edit Recipe Title</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Recipe Title"
+                value={editingRecipeTitle}
+                onChangeText={setEditingRecipeTitle}
+              />
+              <View style={styles.modalButtonContainer}>
+                <Button
+                  title="Save"
+                  onPress={handleUpdateRecipeTitle}
+                  disabled={updateRecipeTitleMutation.isPending}
+                />
+                <Button
+                  title="Cancel"
+                  onPress={() => setIsEditingRecipeTitleModalVisible(false)}
+                  disabled={updateRecipeTitleMutation.isPending}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     </SafeAreaView>
   );
@@ -158,6 +311,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.22,
     shadowRadius: 2.22,
     elevation: 3,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  recipeTitleContainer: {
+    flex: 1,
+    marginRight: 10,
   },
   recipeTitle: {
     fontSize: 18,
@@ -167,6 +327,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginTop: 4,
+  },
+  recipeActions: {
+    flexDirection: 'row',
+    gap: 5,
   },
   noRecipesContainer: {
     flex: 1,
@@ -195,6 +359,48 @@ const styles = StyleSheet.create({
   fabText: {
     fontSize: 24,
     color: 'white',
+  },
+  centeredView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 22,
+  },
+  modalView: {
+    margin: 20,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 35,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    marginBottom: 15,
+    textAlign: 'center',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  input: {
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    marginBottom: 10,
+    paddingHorizontal: 10,
+    width: 250,
+    borderRadius: 5,
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    marginTop: 10,
   },
 });
 
