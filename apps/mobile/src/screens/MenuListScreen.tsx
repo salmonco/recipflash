@@ -94,7 +94,7 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
 
   const handleUpdateMenu = async () => {
     if (editingMenuId === null) {
-      Alert.alert('Error', 'No menu selected for editing.');
+      Alert.alert('오류', '수정할 메뉴를 선택해주세요.');
       return;
     }
 
@@ -106,7 +106,7 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
       });
 
       if (result.success) {
-        Alert.alert('Success', 'Menu item updated successfully!');
+        Alert.alert('성공', '메뉴가 성공적으로 수정되었습니다!');
         // Update the cache directly
         utils.getRecipeById.setData({ id: recipeId }, oldData => {
           if (!isSuccessRecipeResponse(oldData)) return oldData;
@@ -129,12 +129,12 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
         // No need to call refetch() here as cache is updated
         setIsEditingModalVisible(false);
       } else {
-        throw new Error(result.error || 'Failed to update menu item.');
+        throw new Error(result.error || '메뉴 수정에 실패했습니다.');
       }
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : 'An unknown error occurred';
-      Alert.alert('Error', message);
+        err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
+      Alert.alert('오류', message);
     }
   };
 
@@ -150,7 +150,7 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
               id: menuId,
             });
             if (result.success) {
-              Alert.alert('Success', '메뉴가 삭제되었습니다.');
+              Alert.alert('성공', '메뉴가 삭제되었습니다.');
               // Update the cache directly
               utils.getRecipeById.setData({ id: recipeId }, oldData => {
                 if (!isSuccessRecipeResponse(oldData)) return oldData;
@@ -166,12 +166,12 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
               });
               // No need to call refetch() here as cache is updated
             } else {
-              throw new Error(result.error || 'Failed to delete menu item.');
+              throw new Error(result.error || '메뉴 삭제에 실패했습니다.');
             }
           } catch (err) {
             const message =
-              err instanceof Error ? err.message : 'An unknown error occurred';
-            Alert.alert('Error', message);
+              err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
+            Alert.alert('오류', message);
           }
         },
       },
@@ -187,7 +187,7 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
       });
 
       if (result.success) {
-        Alert.alert('Success', 'Menu item added successfully!');
+        Alert.alert('성공', '메뉴가 추가되었습니다!');
         utils.getRecipeById.setData({ id: recipeId }, oldData => {
           if (!isSuccessRecipeResponse(oldData)) return oldData;
           return {
@@ -202,12 +202,12 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
         setNewMenuName('');
         setNewMenuIngredients('');
       } else {
-        throw new Error(result.error || 'Failed to add menu item.');
+        throw new Error(result.error || '메뉴 추가에 실패했습니다.');
       }
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : 'An unknown error occurred';
-      Alert.alert('Error', message);
+        err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
+      Alert.alert('오류', message);
     }
   };
 
@@ -215,7 +215,7 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
     return (
       <SafeAreaView style={[backgroundStyle, styles.centered]}>
         <ActivityIndicator size="large" />
-        <Text style={styles.statusText}>Loading menus...</Text>
+        <Text style={styles.statusText}>메뉴를 불러오는 중입니다...</Text>
       </SafeAreaView>
     );
   }
@@ -223,7 +223,7 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
   if (error) {
     return (
       <SafeAreaView style={[backgroundStyle, styles.centered]}>
-        <Text style={styles.errorText}>Error: {error.message}</Text>
+        <Text style={styles.errorText}>오류: {error.message}</Text>
       </SafeAreaView>
     );
   }
@@ -232,7 +232,7 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
     return (
       <SafeAreaView style={[backgroundStyle, styles.centered]}>
         <Text style={styles.errorText}>
-          No data or failed to fetch recipe menus.
+          데이터가 없거나 레시피 메뉴를 가져오지 못했습니다.
         </Text>
       </SafeAreaView>
     );
@@ -246,7 +246,7 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
         <View style={styles.buttonContainer}>
           <Button
             onPress={handleRandomMemorization}
-            title="랜덤 암기 시작하기"
+            title="랜덤 암기"
           />
         </View>
         {data.recipe?.menus && data.recipe.menus.length > 0 ? (
@@ -278,7 +278,7 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
           />
         ) : (
           <Text style={styles.noMenusText}>
-            No menus found for this recipe.
+            이 레시피에 대한 메뉴가 없습니다.
           </Text>
         )}
 
@@ -290,16 +290,16 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
         >
           <View style={styles.centeredView}>
             <View style={styles.modalView}>
-              <Text style={styles.modalTitle}>Edit Menu Item</Text>
+              <Text style={styles.modalTitle}>메뉴 수정</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Menu Name"
+                placeholder="메뉴 이름"
                 value={editingMenuName}
                 onChangeText={setEditingMenuName}
               />
               <TextInput
                 style={styles.input}
-                placeholder="Ingredients"
+                placeholder="재료"
                 value={editingMenuIngredients}
                 onChangeText={setEditingMenuIngredients}
                 multiline
@@ -333,7 +333,7 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
               <Text style={styles.modalTitle}>새 메뉴 추가</Text>
               <TextInput
                 style={styles.input}
-                placeholder="이름"
+                placeholder="메뉴 이름"
                 value={newMenuName}
                 onChangeText={setNewMenuName}
               />

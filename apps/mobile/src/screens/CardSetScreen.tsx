@@ -79,6 +79,7 @@ function CardSetScreen({ route }: CardSetScreenProps): React.JSX.Element {
             <Text style={styles.cardText}>{item.ingredients}</Text>
           </Animated.View>
         </TouchableOpacity>
+        <Text style={styles.instructionText}>카드를 터치하여 뒤집으세요</Text>
       </View>
     );
   };
@@ -122,6 +123,11 @@ const styles = StyleSheet.create({
   cardText: {
     fontSize: 24,
     fontWeight: 'bold',
+  },
+  instructionText: {
+    marginTop: 20,
+    fontSize: 16,
+    color: '#666',
   },
 });
 

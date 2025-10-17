@@ -63,12 +63,12 @@ function UploadScreen({ navigation }: UploadScreenProps): React.JSX.Element {
       if (!response.ok) {
         const errData = await response.json();
         throw new Error(
-          errData.details || 'Failed to upload and process file.',
+          errData.details || '파일 업로드 및 처리 중 오류가 발생했습니다.',
         );
       }
 
       const result: Recipe = await response.json();
-      Alert.alert('Success', '레시피가 생성되었습니다!');
+      Alert.alert('성공', '레시피가 업로드되고 메뉴가 생성되었습니다!');
       navigation.navigate('MenuList', {
         recipeId: result.id,
         recipeTitle: result.title,
@@ -76,12 +76,14 @@ function UploadScreen({ navigation }: UploadScreenProps): React.JSX.Element {
     } catch (err) {
       if (DocumentPicker.isCancel(err)) {
         // User cancelled the picker
-        console.log('User cancelled the document picker');
+        console.log('사용자가 문서 선택을 취소했습니다.');
       } else {
         const message =
-          err instanceof Error ? err.message : 'An unknown error occurred';
+          err instanceof Error
+            ? err.message
+            : '알 수 없는 오류가 발생했습니다.';
         setError(message);
-        Alert.alert('Error', message);
+        Alert.alert('오류', message);
       }
     } finally {
       setIsLoading(false);
@@ -103,16 +105,16 @@ function UploadScreen({ navigation }: UploadScreenProps): React.JSX.Element {
 
       if (!response.ok) {
         const errData = await response.json();
-        throw new Error(errData.details || 'Failed to create recipe.');
+        throw new Error(errData.details || '레시피 생성에 실패했습니다.');
       }
 
-      Alert.alert('Success', '레시피가 생성되었습니다!');
+      Alert.alert('성공', '레시피가 생성되었습니다!');
       navigation.navigate('RecipeList');
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : 'An unknown error occurred';
+        err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
       setError(message);
-      Alert.alert('Error', message);
+      Alert.alert('오류', message);
     } finally {
       setIsLoading(false);
     }
@@ -124,17 +126,17 @@ function UploadScreen({ navigation }: UploadScreenProps): React.JSX.Element {
       <View style={styles.container}>
         <Text style={styles.title}>Recipflash</Text>
         <Text style={styles.subtitle}>
-          PDF 파일을 업로드하거나 수동으로 레시피를 생성하세요!
+          레시피 PDF를 업로드하여 메뉴를 자동으로 생성하세요.
         </Text>
 
         <View style={styles.buttonContainer}>
           <Button
-            title="PDF 파일 업로드하기"
+            title="레시피 PDF 업로드"
             onPress={handleUpload}
             disabled={isLoading}
           />
           <Button
-            title="레시피 수동 생성하기"
+            title="레시피 수동 생성"
             onPress={handleManualCreate}
             disabled={isLoading}
           />
@@ -143,9 +145,7 @@ function UploadScreen({ navigation }: UploadScreenProps): React.JSX.Element {
         {isLoading && (
           <View style={styles.statusContainer}>
             <ActivityIndicator size="large" />
-            <Text style={styles.statusText}>
-              레시피 생성 중입니다. 잠시만 기다려주세요...
-            </Text>
+            <Text style={styles.statusText}>메뉴를 생성 중입니다...</Text>
           </View>
         )}
 
@@ -178,6 +178,8 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     marginBottom: 24,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
   },
   statusContainer: {
     alignItems: 'center',

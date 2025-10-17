@@ -74,7 +74,7 @@ function RecipeListScreen({
 
   const handleUpdateRecipeTitle = async () => {
     if (editingRecipeId === null) {
-      Alert.alert('Error', '선택된 레시피가 없습니다.');
+      Alert.alert('오류', '선택된 레시피가 없습니다.');
       return;
     }
 
@@ -85,7 +85,7 @@ function RecipeListScreen({
       });
 
       if (result.success) {
-        Alert.alert('Success', '레시피 제목이 업데이트되었습니다!');
+        Alert.alert('성공', '레시피 제목이 업데이트되었습니다!');
 
         // Update the cache directly
         utils.getAllRecipes.setData(undefined, oldData => {
@@ -102,12 +102,12 @@ function RecipeListScreen({
         // No need to call refetch() here as cache is updated
         setIsEditingRecipeTitleModalVisible(false);
       } else {
-        throw new Error(result.error || 'Failed to update recipe title.');
+        throw new Error(result.error || '레시피 제목 업데이트에 실패했습니다.');
       }
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : 'An unknown error occurred';
-      Alert.alert('Error', message);
+        err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
+      Alert.alert('오류', message);
     }
   };
 
@@ -123,7 +123,7 @@ function RecipeListScreen({
               id: recipeId,
             });
             if (result.success) {
-              Alert.alert('Success', '레시피가 삭제되었습니다.');
+              Alert.alert('성공', '레시피가 삭제되었습니다.');
               // Update the cache directly
               utils.getAllRecipes.setData(undefined, oldData => {
                 if (!isSuccessRecipesResponse(oldData)) return oldData;
@@ -135,12 +135,12 @@ function RecipeListScreen({
                 };
               });
             } else {
-              throw new Error(result.error || 'Failed to delete recipe.');
+              throw new Error(result.error || '레시피 삭제에 실패했습니다.');
             }
           } catch (err) {
             const message =
-              err instanceof Error ? err.message : 'An unknown error occurred';
-            Alert.alert('Error', message);
+              err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
+            Alert.alert('오류', message);
           }
         },
       },
@@ -159,7 +159,7 @@ function RecipeListScreen({
   if (error) {
     return (
       <SafeAreaView style={[backgroundStyle, styles.centered]}>
-        <Text style={styles.errorText}>Error: {error.message}</Text>
+        <Text style={styles.errorText}>오류: {error.message}</Text>
       </SafeAreaView>
     );
   }
@@ -225,7 +225,7 @@ function RecipeListScreen({
               메뉴가 없습니다. 새 메뉴를 등록해보세요!
             </Text>
             <Button
-              title="Upload New Recipe"
+              title="새 레시피 업로드"
               onPress={() => navigation.navigate('Upload')}
             />
           </View>

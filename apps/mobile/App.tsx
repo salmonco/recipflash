@@ -39,12 +39,12 @@ function App(): React.JSX.Element {
             <Stack.Screen
               name="RecipeList"
               component={RecipeListScreen}
-              options={{ title: 'All Recipes' }}
+              options={{ title: '모든 레시피' }}
             />
             <Stack.Screen
               name="Upload"
               component={UploadScreen}
-              options={{ title: 'Upload Recipe' }}
+              options={{ title: '레시피 업로드' }}
             />
             <Stack.Screen
               name="MenuList"
@@ -54,7 +54,7 @@ function App(): React.JSX.Element {
             <Stack.Screen
               name="CardSet"
               component={CardSetScreen}
-              options={{ title: 'Card Set' }}
+              options={{ title: '카드 세트' }}
             />
           </Stack.Navigator>
         </NavigationContainer>
