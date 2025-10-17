@@ -6,6 +6,8 @@ import { httpBatchLink } from '@trpc/client';
 import React from 'react';
 import { trpc } from './src/trpc';
 
+import { Menu } from './src/models/Menu';
+import CardSetScreen from './src/screens/CardSetScreen';
 import MenuListScreen from './src/screens/MenuListScreen';
 import RecipeListScreen from './src/screens/RecipeListScreen';
 import UploadScreen from './src/screens/UploadScreen';
@@ -14,6 +16,7 @@ export type RootStackParamList = {
   Upload: undefined; // No params for UploadScreen
   RecipeList: undefined; // No params for RecipeListScreen
   MenuList: { recipeId: number; recipeTitle: string }; // Params for MenuListScreen
+  CardSet: { menus: Menu[] };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -36,17 +39,22 @@ function App(): React.JSX.Element {
             <Stack.Screen
               name="RecipeList"
               component={RecipeListScreen}
-              options={{ title: '모든 레시피' }}
+              options={{ title: 'All Recipes' }}
             />
             <Stack.Screen
               name="Upload"
               component={UploadScreen}
-              options={{ title: '레시피 업로드' }}
+              options={{ title: 'Upload Recipe' }}
             />
             <Stack.Screen
               name="MenuList"
               component={MenuListScreen}
               options={({ route }) => ({ title: route.params.recipeTitle })}
+            />
+            <Stack.Screen
+              name="CardSet"
+              component={CardSetScreen}
+              options={{ title: 'Card Set' }}
             />
           </Stack.Navigator>
         </NavigationContainer>

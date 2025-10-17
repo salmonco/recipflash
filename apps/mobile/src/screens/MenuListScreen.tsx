@@ -1,6 +1,9 @@
-import { useFocusEffect } from '@react-navigation/native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useState } from 'react';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import {
+  NativeStackNavigationProp,
+  NativeStackScreenProps,
+} from '@react-navigation/native-stack';
+import { useCallback, useLayoutEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -23,6 +26,7 @@ import { SuccessRecipeResponse, trpc } from '../trpc';
 type RootStackParamList = {
   RecipeList: undefined;
   MenuList: { recipeId: number; recipeTitle: string };
+  CardSet: { menus: Menu[] };
 };
 
 type MenuListScreenProps = NativeStackScreenProps<
@@ -38,6 +42,8 @@ function isSuccessRecipeResponse(data: any): data is SuccessRecipeResponse {
 function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
   const { recipeId, recipeTitle } = route.params;
   const isDarkMode = useColorScheme() === 'dark';
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { data, isLoading, error, refetch } = trpc.getRecipeById.useQuery({
     id: recipeId,
   });
@@ -62,6 +68,23 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
     backgroundColor: isDarkMode ? '#333' : '#F3F3F3',
     flex: 1,
   };
+
+  useLayoutEffect(() => {
+    const handleRandomMemorization = () => {
+      if (data?.success && data.recipe.menus.length > 0) {
+        const shuffledMenus = [...data.recipe.menus].sort(
+          () => Math.random() - 0.5,
+        );
+        navigation.navigate('CardSet', { menus: shuffledMenus });
+      }
+    };
+
+    navigation.setOptions({
+      headerRight: () => (
+        <Button onPress={handleRandomMemorization} title="랜덤 암기" />
+      ),
+    });
+  }, [navigation, data]);
 
   // Refetch data when the screen comes into focus
   useFocusEffect(
