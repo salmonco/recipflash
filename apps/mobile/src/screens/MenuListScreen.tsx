@@ -49,8 +49,14 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
   const [editingMenuName, setEditingMenuName] = useState('');
   const [editingMenuIngredients, setEditingMenuIngredients] = useState('');
 
+  // State for adding a new menu
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [newMenuName, setNewMenuName] = useState('');
+  const [newMenuIngredients, setNewMenuIngredients] = useState('');
+
   const updateMenuMutation = trpc.updateMenu.useMutation();
   const deleteMenuMutation = trpc.deleteMenu.useMutation();
+  const createMenuMutation = trpc.createMenu.useMutation();
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? '#333' : '#F3F3F3',
@@ -118,49 +124,76 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
   };
 
   const handleDeleteMenu = (menuId: number) => {
-    Alert.alert(
-      'Delete Menu',
-      'Are you sure you want to delete this menu item?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const result = await deleteMenuMutation.mutateAsync({
-                id: menuId,
+    Alert.alert('메뉴 삭제', '이 메뉴를 삭제하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const result = await deleteMenuMutation.mutateAsync({
+              id: menuId,
+            });
+            if (result.success) {
+              Alert.alert('Success', 'Menu item deleted successfully!');
+              // Update the cache directly
+              utils.getRecipeById.setData({ id: recipeId }, oldData => {
+                if (!isSuccessRecipeResponse(oldData)) return oldData;
+                return {
+                  ...oldData,
+                  recipe: {
+                    ...oldData.recipe,
+                    menus: oldData.recipe.menus.filter(
+                      menu => menu.id !== menuId,
+                    ),
+                  },
+                };
               });
-              if (result.success) {
-                Alert.alert('Success', 'Menu item deleted successfully!');
-                // Update the cache directly
-                utils.getRecipeById.setData({ id: recipeId }, oldData => {
-                  if (!isSuccessRecipeResponse(oldData)) return oldData;
-                  return {
-                    ...oldData,
-                    recipe: {
-                      ...oldData.recipe,
-                      menus: oldData.recipe.menus.filter(
-                        menu => menu.id !== menuId,
-                      ),
-                    },
-                  };
-                });
-                // No need to call refetch() here as cache is updated
-              } else {
-                throw new Error(result.error || 'Failed to delete menu item.');
-              }
-            } catch (err) {
-              const message =
-                err instanceof Error
-                  ? err.message
-                  : 'An unknown error occurred';
-              Alert.alert('Error', message);
+              // No need to call refetch() here as cache is updated
+            } else {
+              throw new Error(result.error || 'Failed to delete menu item.');
             }
-          },
+          } catch (err) {
+            const message =
+              err instanceof Error ? err.message : 'An unknown error occurred';
+            Alert.alert('Error', message);
+          }
         },
-      ],
-    );
+      },
+    ]);
+  };
+
+  const handleAddMenu = async () => {
+    try {
+      const result = await createMenuMutation.mutateAsync({
+        recipeId,
+        name: newMenuName,
+        ingredients: newMenuIngredients,
+      });
+
+      if (result.success) {
+        Alert.alert('Success', 'Menu item added successfully!');
+        utils.getRecipeById.setData({ id: recipeId }, oldData => {
+          if (!isSuccessRecipeResponse(oldData)) return oldData;
+          return {
+            ...oldData,
+            recipe: {
+              ...oldData.recipe,
+              menus: [...oldData.recipe.menus, result.menu],
+            },
+          };
+        });
+        setIsAddModalVisible(false);
+        setNewMenuName('');
+        setNewMenuIngredients('');
+      } else {
+        throw new Error(result.error || 'Failed to add menu item.');
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'An unknown error occurred';
+      Alert.alert('Error', message);
+    }
   };
 
   if (isLoading) {
@@ -252,12 +285,13 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
               />
               <View style={styles.modalButtonContainer}>
                 <Button
-                  title="Cancel"
+                  title="취소"
                   onPress={() => setIsEditingModalVisible(false)}
                   disabled={updateMenuMutation.isPending}
+                  color="gray"
                 />
                 <Button
-                  title="Save"
+                  title="저장"
                   onPress={handleUpdateMenu}
                   disabled={updateMenuMutation.isPending}
                 />
@@ -265,6 +299,53 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
             </View>
           </View>
         </Modal>
+
+        {/* Add Menu Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={isAddModalVisible}
+          onRequestClose={() => setIsAddModalVisible(false)}
+        >
+          <View style={styles.centeredView}>
+            <View style={styles.modalView}>
+              <Text style={styles.modalTitle}>새 메뉴 추가</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="이름"
+                value={newMenuName}
+                onChangeText={setNewMenuName}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="재료"
+                value={newMenuIngredients}
+                onChangeText={setNewMenuIngredients}
+                multiline
+              />
+              <View style={styles.modalButtonContainer}>
+                <Button
+                  title="취소"
+                  onPress={() => setIsAddModalVisible(false)}
+                  disabled={createMenuMutation.isPending}
+                  color="gray"
+                />
+                <Button
+                  title="추가"
+                  onPress={handleAddMenu}
+                  disabled={createMenuMutation.isPending}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        <Pressable
+          style={styles.fab}
+          onPress={() => setIsAddModalVisible(true)}
+        >
+          <Icon name="add" size={30} color="white" />
+        </Pressable>
       </View>
     </SafeAreaView>
   );
@@ -375,6 +456,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     width: '100%',
     marginTop: 10,
+  },
+  fab: {
+    position: 'absolute',
+    right: 30,
+    bottom: 30,
+    backgroundColor: '#007AFF',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
   },
 });
 

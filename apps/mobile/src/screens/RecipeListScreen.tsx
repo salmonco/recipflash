@@ -74,7 +74,7 @@ function RecipeListScreen({
 
   const handleUpdateRecipeTitle = async () => {
     if (editingRecipeId === null) {
-      Alert.alert('Error', 'No recipe selected for editing.');
+      Alert.alert('Error', '선택된 레시피가 없습니다.');
       return;
     }
 
@@ -85,7 +85,7 @@ function RecipeListScreen({
       });
 
       if (result.success) {
-        Alert.alert('Success', 'Recipe title updated successfully!');
+        Alert.alert('Success', '레시피 제목이 업데이트되었습니다!');
 
         // Update the cache directly
         utils.getAllRecipes.setData(undefined, oldData => {
@@ -112,52 +112,46 @@ function RecipeListScreen({
   };
 
   const handleDeleteRecipe = (recipeId: number) => {
-    Alert.alert(
-      'Delete Recipe',
-      'Are you sure you want to delete this recipe and all its menus?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const result = await deleteRecipeMutation.mutateAsync({
-                id: recipeId,
+    Alert.alert('레시피 삭제', '이 레시피와 모든 메뉴를 삭제하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const result = await deleteRecipeMutation.mutateAsync({
+              id: recipeId,
+            });
+            if (result.success) {
+              Alert.alert('Success', '레시피가 삭제되었습니다.');
+              // Update the cache directly
+              utils.getAllRecipes.setData(undefined, oldData => {
+                if (!isSuccessRecipesResponse(oldData)) return oldData;
+                return {
+                  ...oldData,
+                  recipes: oldData.recipes.filter(
+                    recipe => recipe.id !== recipeId,
+                  ),
+                };
               });
-              if (result.success) {
-                Alert.alert('Success', 'Recipe deleted successfully!');
-                // Update the cache directly
-                utils.getAllRecipes.setData(undefined, oldData => {
-                  if (!isSuccessRecipesResponse(oldData)) return oldData;
-                  return {
-                    ...oldData,
-                    recipes: oldData.recipes.filter(
-                      recipe => recipe.id !== recipeId,
-                    ),
-                  };
-                });
-              } else {
-                throw new Error(result.error || 'Failed to delete recipe.');
-              }
-            } catch (err) {
-              const message =
-                err instanceof Error
-                  ? err.message
-                  : 'An unknown error occurred';
-              Alert.alert('Error', message);
+            } else {
+              throw new Error(result.error || 'Failed to delete recipe.');
             }
-          },
+          } catch (err) {
+            const message =
+              err instanceof Error ? err.message : 'An unknown error occurred';
+            Alert.alert('Error', message);
+          }
         },
-      ],
-    );
+      },
+    ]);
   };
 
   if (isLoading) {
     return (
       <SafeAreaView style={[backgroundStyle, styles.centered]}>
         <ActivityIndicator size="large" />
-        <Text style={styles.statusText}>Loading recipes...</Text>
+        <Text style={styles.statusText}>레시피를 불러오는 중입니다...</Text>
       </SafeAreaView>
     );
   }
@@ -174,7 +168,7 @@ function RecipeListScreen({
     return (
       <SafeAreaView style={[backgroundStyle, styles.centered]}>
         <Text style={styles.errorText}>
-          No data or failed to fetch recipes.
+          레시피가 없습니다. 새 레시피를 등록해보세요!
         </Text>
       </SafeAreaView>
     );
@@ -186,7 +180,7 @@ function RecipeListScreen({
     <SafeAreaView style={backgroundStyle}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       <View style={styles.container}>
-        <Text style={styles.title}>Recipes</Text>
+        <Text style={styles.title}>레시피</Text>
 
         {hasRecipes ? (
           <FlatList
@@ -205,7 +199,7 @@ function RecipeListScreen({
                 >
                   <Text style={styles.recipeTitle}>{item.title}</Text>
                   <Text style={styles.recipeMenuCount}>
-                    {item.menus.length} menus
+                    {item.menus.length} 메뉴
                   </Text>
                 </Pressable>
                 <View style={styles.recipeActions}>
@@ -227,7 +221,9 @@ function RecipeListScreen({
           />
         ) : (
           <View style={styles.noRecipesContainer}>
-            <Text style={styles.noRecipesText}>No recipes found.</Text>
+            <Text style={styles.noRecipesText}>
+              메뉴가 없습니다. 새 메뉴를 등록해보세요!
+            </Text>
             <Button
               title="Upload New Recipe"
               onPress={() => navigation.navigate('Upload')}
@@ -252,21 +248,22 @@ function RecipeListScreen({
         >
           <View style={styles.centeredView}>
             <View style={styles.modalView}>
-              <Text style={styles.modalTitle}>Edit Recipe Title</Text>
+              <Text style={styles.modalTitle}>레시피 제목 수정</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Recipe Title"
+                placeholder="레시피 제목"
                 value={editingRecipeTitle}
                 onChangeText={setEditingRecipeTitle}
               />
               <View style={styles.modalButtonContainer}>
                 <Button
-                  title="Cancel"
+                  title="취소"
                   onPress={() => setIsEditingRecipeTitleModalVisible(false)}
                   disabled={updateRecipeTitleMutation.isPending}
+                  color="gray"
                 />
                 <Button
-                  title="Save"
+                  title="저장"
                   onPress={handleUpdateRecipeTitle}
                   disabled={updateRecipeTitleMutation.isPending}
                 />

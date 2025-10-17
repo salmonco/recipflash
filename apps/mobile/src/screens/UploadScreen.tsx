@@ -68,7 +68,7 @@ function UploadScreen({ navigation }: UploadScreenProps): React.JSX.Element {
       }
 
       const result: Recipe = await response.json();
-      Alert.alert('Success', 'Recipe uploaded and menus generated!');
+      Alert.alert('Success', '레시피가 생성되었습니다!');
       navigation.navigate('MenuList', {
         recipeId: result.id,
         recipeTitle: result.title,
@@ -88,19 +88,54 @@ function UploadScreen({ navigation }: UploadScreenProps): React.JSX.Element {
     }
   };
 
+  const handleManualCreate = async () => {
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:4000/create-recipe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title: '레시피 모음 1' }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.details || 'Failed to create recipe.');
+      }
+
+      Alert.alert('Success', '레시피가 생성되었습니다!');
+      navigation.navigate('RecipeList');
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'An unknown error occurred';
+      setError(message);
+      Alert.alert('Error', message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={backgroundStyle}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       <View style={styles.container}>
         <Text style={styles.title}>Recipflash</Text>
         <Text style={styles.subtitle}>
-          Upload a recipe PDF to generate menus automatically.
+          PDF 파일을 업로드하거나 수동으로 레시피를 생성하세요!
         </Text>
 
         <View style={styles.buttonContainer}>
           <Button
-            title="Upload Recipe PDF"
+            title="PDF 파일 업로드하기"
             onPress={handleUpload}
+            disabled={isLoading}
+          />
+          <Button
+            title="레시피 수동 생성하기"
+            onPress={handleManualCreate}
             disabled={isLoading}
           />
         </View>
@@ -109,7 +144,7 @@ function UploadScreen({ navigation }: UploadScreenProps): React.JSX.Element {
           <View style={styles.statusContainer}>
             <ActivityIndicator size="large" />
             <Text style={styles.statusText}>
-              Processing PDF and generating menus...
+              레시피 생성 중입니다. 잠시만 기다려주세요...
             </Text>
           </View>
         )}
@@ -143,8 +178,6 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     marginBottom: 24,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
   },
   statusContainer: {
     alignItems: 'center',

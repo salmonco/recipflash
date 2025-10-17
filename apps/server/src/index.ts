@@ -229,12 +229,42 @@ const appRouter = t.router({
         }
       }
     ),
+
+  createMenu: t.procedure
+    .input(
+      z.object({
+        recipeId: z.number(),
+        name: z.string(),
+        ingredients: z.string(),
+      })
+    )
+    .mutation(
+      async ({ input }): Promise<SuccessUpdateMenuResponse | ErrorResponse> => {
+        const { recipeId, name, ingredients } = input;
+        try {
+          const newMenu = await prisma.menu.create({
+            data: {
+              name,
+              ingredients,
+              recipeId,
+            },
+          });
+          return { success: true, menu: newMenu };
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : "Unknown error";
+          console.error("Error creating menu item:", message);
+          return { success: false, error: message };
+        }
+      }
+    ),
 });
 
 export type AppRouter = typeof appRouter;
 
 // --- Express App Setup ---
 const app = express();
+app.use(express.json()); // Add this line to parse JSON bodies
 
 // --- Express Route for PDF Upload ---
 app.post("/upload-recipe", upload.single("recipe"), async (req, res) => {
@@ -319,6 +349,25 @@ app.post("/upload-recipe", upload.single("recipe"), async (req, res) => {
     console.error("Error processing PDF upload:", message);
     res.status(500).send({
       error: "Failed to process PDF and generate flashcards.",
+      details: message,
+    });
+  }
+});
+
+app.post("/create-recipe", async (req, res) => {
+  try {
+    const { title } = req.body;
+    const newRecipe = await prisma.recipe.create({
+      data: {
+        title: title || "Recipe Collection 1",
+      },
+    });
+    res.status(201).json(newRecipe);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Error creating recipe:", message);
+    res.status(500).send({
+      error: "Failed to create recipe.",
       details: message,
     });
   }
