@@ -16,6 +16,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Recipe } from '../models/Recipe';
 import { SuccessRecipesResponse, trpc } from '../trpc';
 
@@ -208,15 +209,18 @@ function RecipeListScreen({
                   </Text>
                 </Pressable>
                 <View style={styles.recipeActions}>
-                  <Button
-                    title="Edit"
+                  <Pressable
                     onPress={() => handleEditRecipeTitlePress(item)}
-                  />
-                  <Button
-                    title="Delete"
+                    style={styles.iconButton}
+                  >
+                    <Icon name="edit" size={24} color="#007AFF" />
+                  </Pressable>
+                  <Pressable
                     onPress={() => handleDeleteRecipe(item.id)}
-                    color="red"
-                  />
+                    style={styles.iconButton}
+                  >
+                    <Icon name="delete" size={24} color="red" />
+                  </Pressable>
                 </View>
               </View>
             )}
@@ -257,13 +261,13 @@ function RecipeListScreen({
               />
               <View style={styles.modalButtonContainer}>
                 <Button
-                  title="Save"
-                  onPress={handleUpdateRecipeTitle}
+                  title="Cancel"
+                  onPress={() => setIsEditingRecipeTitleModalVisible(false)}
                   disabled={updateRecipeTitleMutation.isPending}
                 />
                 <Button
-                  title="Cancel"
-                  onPress={() => setIsEditingRecipeTitleModalVisible(false)}
+                  title="Save"
+                  onPress={handleUpdateRecipeTitle}
                   disabled={updateRecipeTitleMutation.isPending}
                 />
               </View>
@@ -331,6 +335,9 @@ const styles = StyleSheet.create({
   recipeActions: {
     flexDirection: 'row',
     gap: 5,
+  },
+  iconButton: {
+    padding: 5,
   },
   noRecipesContainer: {
     flex: 1,

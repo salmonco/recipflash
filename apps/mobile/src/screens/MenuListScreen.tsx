@@ -7,6 +7,7 @@ import {
   Button,
   FlatList,
   Modal,
+  Pressable,
   StatusBar,
   StyleSheet,
   Text,
@@ -15,6 +16,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Menu } from '../models/Menu';
 import { SuccessRecipeResponse, trpc } from '../trpc';
 
@@ -199,16 +201,24 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
             keyExtractor={item => item.id.toString()}
             renderItem={({ item }) => (
               <View style={styles.card}>
-                <Text style={styles.cardName}>{item.name}</Text>
-                <Text style={styles.cardIngredients}>{item.ingredients}</Text>
-                <View style={styles.menuActions}>
-                  <Button title="Edit" onPress={() => handleEditPress(item)} />
-                  <Button
-                    title="Delete"
-                    onPress={() => handleDeleteMenu(item.id)}
-                    color="red"
-                  />
+                <View style={styles.cardHeader}>
+                  <Text style={styles.cardName}>{item.name}</Text>
+                  <View style={styles.menuActions}>
+                    <Pressable
+                      onPress={() => handleEditPress(item)}
+                      style={styles.iconButton}
+                    >
+                      <Icon name="edit" size={24} color="#007AFF" />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => handleDeleteMenu(item.id)}
+                      style={styles.iconButton}
+                    >
+                      <Icon name="delete" size={24} color="red" />
+                    </Pressable>
+                  </View>
                 </View>
+                <Text style={styles.cardIngredients}>{item.ingredients}</Text>
               </View>
             )}
           />
@@ -242,13 +252,13 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
               />
               <View style={styles.modalButtonContainer}>
                 <Button
-                  title="Save"
-                  onPress={handleUpdateMenu}
+                  title="Cancel"
+                  onPress={() => setIsEditingModalVisible(false)}
                   disabled={updateMenuMutation.isPending}
                 />
                 <Button
-                  title="Cancel"
-                  onPress={() => setIsEditingModalVisible(false)}
+                  title="Save"
+                  onPress={handleUpdateMenu}
                   disabled={updateMenuMutation.isPending}
                 />
               </View>
@@ -296,22 +306,27 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.22,
     shadowRadius: 2.22,
     elevation: 3,
+  },
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 4,
   },
   cardName: {
     fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 8,
   },
   cardIngredients: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#555',
   },
   menuActions: {
     flexDirection: 'row',
-    gap: 5,
+    gap: 10,
+  },
+  iconButton: {
+    padding: 5,
   },
   noMenusText: {
     fontSize: 16,
