@@ -3,7 +3,7 @@ import {
   NativeStackNavigationProp,
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
-import { useCallback, useLayoutEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -69,22 +69,14 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
     flex: 1,
   };
 
-  useLayoutEffect(() => {
-    const handleRandomMemorization = () => {
-      if (data?.success && data.recipe.menus.length > 0) {
-        const shuffledMenus = [...data.recipe.menus].sort(
-          () => Math.random() - 0.5,
-        );
-        navigation.navigate('CardSet', { menus: shuffledMenus });
-      }
-    };
-
-    navigation.setOptions({
-      headerRight: () => (
-        <Button onPress={handleRandomMemorization} title="랜덤 암기" />
-      ),
-    });
-  }, [navigation, data]);
+  const handleRandomMemorization = () => {
+    if (data?.success && data.recipe.menus.length > 0) {
+      const shuffledMenus = [...data.recipe.menus].sort(
+        () => Math.random() - 0.5,
+      );
+      navigation.navigate('CardSet', { menus: shuffledMenus });
+    }
+  };
 
   // Refetch data when the screen comes into focus
   useFocusEffect(
@@ -158,7 +150,7 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
               id: menuId,
             });
             if (result.success) {
-              Alert.alert('Success', 'Menu item deleted successfully!');
+              Alert.alert('Success', '메뉴가 삭제되었습니다.');
               // Update the cache directly
               utils.getRecipeById.setData({ id: recipeId }, oldData => {
                 if (!isSuccessRecipeResponse(oldData)) return oldData;
@@ -251,6 +243,12 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       <View style={styles.container}>
         <Text style={styles.title}>{recipeTitle}</Text>
+        <View style={styles.buttonContainer}>
+          <Button
+            onPress={handleRandomMemorization}
+            title="랜덤 암기 시작하기"
+          />
+        </View>
         {data.recipe?.menus && data.recipe.menus.length > 0 ? (
           <FlatList
             data={data.recipe.menus}
@@ -385,10 +383,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
+  },
+  buttonContainer: {
+    marginBottom: 16,
   },
   statusText: {
     marginTop: 12,
