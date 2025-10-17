@@ -1,5 +1,5 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Animated,
   Dimensions,
@@ -27,6 +27,41 @@ function CardSetScreen({ route }: CardSetScreenProps): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
   const [flipped, setFlipped] = useState(menus.map(() => false));
   const [flipAnimations] = useState(menus.map(() => new Animated.Value(0)));
+  const [instructionAnimation] = useState(new Animated.Value(1));
+
+  useEffect(() => {
+    const blinkAndFade = () => {
+      Animated.sequence([
+        Animated.timing(instructionAnimation, {
+          toValue: 0.5,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(instructionAnimation, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(instructionAnimation, {
+          toValue: 0.5,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(instructionAnimation, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(instructionAnimation, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    };
+
+    blinkAndFade();
+  }, [instructionAnimation]);
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? '#333' : '#F3F3F3',
@@ -71,15 +106,33 @@ function CardSetScreen({ route }: CardSetScreenProps): React.JSX.Element {
           <Animated.View
             style={[styles.card, styles.cardFront, frontAnimatedStyle]}
           >
-            <Text style={styles.cardText}>{item.name}</Text>
+            <View style={styles.cardTextContainer}>
+              {item.name.split(' ').map((word, i) => (
+                <Text key={`${word}-${i}`} style={styles.cardText}>
+                  {word}
+                  {i === item.name.split(' ').length - 1 ? '' : ' '}
+                </Text>
+              ))}
+            </View>
           </Animated.View>
           <Animated.View
             style={[styles.card, styles.cardBack, backAnimatedStyle]}
           >
-            <Text style={styles.cardText}>{item.ingredients}</Text>
+            <View style={styles.cardTextContainer}>
+              {item.ingredients.split(' ').map((word, i) => (
+                <Text key={`${word}-${i}`} style={styles.cardText}>
+                  {word}
+                  {i === item.ingredients.split(' ').length - 1 ? '' : ' '}
+                </Text>
+              ))}
+            </View>
           </Animated.View>
         </TouchableOpacity>
-        <Text style={styles.instructionText}>카드를 터치하여 뒤집으세요</Text>
+        <Animated.Text
+          style={[styles.instructionText, { opacity: instructionAnimation }]}
+        >
+          카드를 터치하여 뒤집으세요
+        </Animated.Text>
       </View>
     );
   };
@@ -116,13 +169,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   cardBack: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#fff',
     position: 'absolute',
     top: 0,
   },
   cardText: {
     fontSize: 24,
     fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  cardTextContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    padding: 20,
   },
   instructionText: {
     marginTop: 20,
