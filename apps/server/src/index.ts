@@ -4,10 +4,24 @@ import { ChatOllama } from "@langchain/ollama";
 import { initTRPC } from "@trpc/server";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import express from "express";
+import * as admin from "firebase-admin";
 import multer from "multer";
 import fetch, { Blob, FormData } from "node-fetch"; // For making HTTP requests to Python AI server
 import { z } from "zod";
 import { PrismaClient } from "./generated/prisma";
+import { authRouter } from "./router/auth/authRouter";
+
+// Initialize Firebase Admin
+if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+  });
+} else {
+  console.error(
+    "FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set."
+  );
+}
 
 // Define explicit success and error response types
 interface SuccessAiRecipeResponse {
@@ -64,6 +78,7 @@ const upload = multer({ storage: storage });
 
 // --- tRPC Router Definition ---
 const appRouter = t.router({
+  auth: authRouter,
   greeting: t.procedure
     .input(z.object({ name: z.string() }))
     .query(({ input }) => {

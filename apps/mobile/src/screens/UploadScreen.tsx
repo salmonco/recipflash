@@ -68,7 +68,7 @@ function UploadScreen({ navigation }: UploadScreenProps): React.JSX.Element {
       }
 
       const result: Recipe = await response.json();
-      Alert.alert('성공', '레시피가 업로드되고 메뉴가 생성되었습니다!');
+      Alert.alert('성공', '메뉴가 생성되었습니다!');
       navigation.navigate('MenuList', {
         recipeId: result.id,
         recipeTitle: result.title,
