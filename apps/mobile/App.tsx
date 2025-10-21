@@ -11,6 +11,7 @@ import MenuListScreen from './src/screens/MenuListScreen';
 import RecipeListScreen from './src/screens/RecipeListScreen';
 import UploadScreen from './src/screens/UploadScreen';
 import { trpc } from './src/trpc';
+import { customLink } from './src/trpc/customLink';
 
 export type RootStackParamList = {
   Upload: undefined;
@@ -22,8 +23,10 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const queryClient = new QueryClient();
+
 const trpcClient = trpc.createClient({
   links: [
+    customLink,
     httpBatchLink({
       url: 'http://localhost:4000/trpc',
       async headers() {
@@ -45,6 +48,7 @@ function App(): React.JSX.Element {
 
   useEffect(() => {
     const unsubscribe = auth().onAuthStateChanged(user => {
+      console.log('Auth state changed. User:', user);
       setIsLoggedIn(!!user);
     });
 

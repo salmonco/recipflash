@@ -13,7 +13,7 @@ export const authenticateUser = async (
 ) => {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) {
-    return res.status(401).send({ error: "Unauthorized" });
+    return res.status(401).send({ error: "UNAUTHORIZED" });
   }
 
   const idToken = authHeader.split("Bearer ")[1];
@@ -52,10 +52,10 @@ export const authenticateUser = async (
       req.userId = account.userId;
       next();
     } else {
-      res.status(401).send({ error: "Unauthorized" });
+      res.status(401).send({ error: "UNAUTHORIZED" });
     }
   } catch (error) {
     console.error("Error verifying Firebase ID token:", error);
-    res.status(401).send({ error: "Unauthorized" });
+    res.status(401).send({ error: "UNAUTHORIZED" });
   }
 };

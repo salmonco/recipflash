@@ -23,7 +23,7 @@ router.post(
 
     const userId = req.userId;
     if (!userId) {
-      return res.status(401).send({ error: "Unauthorized" });
+      return res.status(401).send({ error: "UNAUTHORIZED" });
     }
 
     try {
