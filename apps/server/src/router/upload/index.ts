@@ -23,7 +23,21 @@ router.post(
     }
 
     try {
+      // S3 Upload Logic
+      const s3BucketUrl = process.env.AWS_S3_BUCKET_URL || "";
+      const fileName = `${Date.now()}-${req.file.originalname}`;
+      const s3UploadUrl = `${s3BucketUrl}/${fileName}`;
+
+      await fetch(s3UploadUrl, {
+        method: "PUT",
+        body: req.file.buffer,
+        headers: {
+          "Content-Type": req.file.mimetype,
+        },
+      });
+
       const formData = new FormData();
+
       formData.append(
         "file",
         new Blob([new Uint8Array(req.file.buffer)], {
