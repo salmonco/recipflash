@@ -1,21 +1,18 @@
-import { initTRPC } from '@trpc/server';
-import { z } from 'zod';
-import * as admin from 'firebase-admin';
-import { PrismaClient } from '../../generated/prisma';
-import { jwtDecode } from 'jwt-decode';
+import * as admin from "firebase-admin";
+import { jwtDecode } from "jwt-decode";
+import { z } from "zod";
+import { prisma } from "../../prisma";
+import { publicProcedure, router } from "../../trpc";
 
-const t = initTRPC.create();
-const prisma = new PrismaClient();
-
-export const authRouter = t.router({
-  googleLogin: t.procedure
+export const authRouter = router({
+  googleLogin: publicProcedure
     .input(z.object({ idToken: z.string() }))
     .mutation(async ({ input }) => {
       const { idToken } = input;
       try {
-        console.log('Received ID Token:', idToken);
+        console.log("Received ID Token:", idToken);
         const decodedClientToken = jwtDecode(idToken);
-        console.log('Decoded Client Token:', decodedClientToken);
+        console.log("Decoded Client Token:", decodedClientToken);
 
         const decodedToken = await admin.auth().verifyIdToken(idToken);
         const { uid, email, name } = decodedToken;
@@ -23,7 +20,7 @@ export const authRouter = t.router({
         let account = await prisma.account.findUnique({
           where: {
             provider_providerId: {
-              provider: 'google',
+              provider: "google",
               providerId: uid,
             },
           },
@@ -45,7 +42,7 @@ export const authRouter = t.router({
           // Link account to existing user
           await prisma.account.create({
             data: {
-              provider: 'google',
+              provider: "google",
               providerId: uid,
               userId: user.id,
             },
@@ -58,7 +55,7 @@ export const authRouter = t.router({
               name: name || null,
               accounts: {
                 create: {
-                  provider: 'google',
+                  provider: "google",
                   providerId: uid,
                 },
               },
@@ -68,8 +65,9 @@ export const authRouter = t.router({
 
         return { success: true, user };
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('Error verifying Google ID token:', message);
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
+        console.error("Error verifying Google ID token:", message);
         return { success: false, error: message };
       }
     }),

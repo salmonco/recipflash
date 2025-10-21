@@ -18,7 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Recipe } from '../models/Recipe';
-import { SuccessRecipesResponse, trpc } from '../trpc';
+import { trpc } from '../trpc';
 
 type RootStackParamList = {
   RecipeList: undefined;
@@ -31,16 +31,16 @@ type RecipeListScreenProps = NativeStackScreenProps<
   'RecipeList'
 >;
 
-// Type predicate function
-function isSuccessRecipesResponse(data: any): data is SuccessRecipesResponse {
-  return data && data.success === true && Array.isArray(data.recipes);
-}
-
 function RecipeListScreen({
   navigation,
 }: RecipeListScreenProps): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
-  const { data, isLoading, error, refetch } = trpc.getAllRecipes.useQuery();
+  const {
+    data: allRecipes,
+    isLoading,
+    error,
+    refetch,
+  } = trpc.recipe.getAllRecipes.useQuery();
   const utils = trpc.useUtils();
 
   // State for editing recipe title
@@ -51,8 +51,8 @@ function RecipeListScreen({
   const [editingRecipeId, setEditingRecipeId] = useState<number | null>(null);
   const [editingRecipeTitle, setEditingRecipeTitle] = useState('');
 
-  const updateRecipeTitleMutation = trpc.updateRecipeTitle.useMutation();
-  const deleteRecipeMutation = trpc.deleteRecipe.useMutation();
+  const updateRecipeTitleMutation = trpc.recipe.updateRecipeTitle.useMutation();
+  const deleteRecipeMutation = trpc.recipe.deleteRecipe.useMutation();
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? '#333' : '#F3F3F3',
@@ -88,21 +88,26 @@ function RecipeListScreen({
         Alert.alert('성공', '레시피 제목이 업데이트되었습니다!');
 
         // Update the cache directly
-        utils.getAllRecipes.setData(undefined, oldData => {
-          if (!isSuccessRecipesResponse(oldData)) return oldData;
+        utils.recipe.getAllRecipes.setData(undefined, oldData => {
+          if (!oldData?.success) return oldData;
           return {
             ...oldData,
-            recipes: oldData.recipes.map(recipe =>
-              recipe.id === editingRecipeId
-                ? { ...recipe, title: editingRecipeTitle }
-                : recipe,
-            ),
+            data: {
+              ...oldData.data,
+              recipes: oldData.data.recipes.map(recipe =>
+                recipe.id === editingRecipeId
+                  ? { ...recipe, title: editingRecipeTitle }
+                  : recipe,
+              ),
+            },
           };
         });
         // No need to call refetch() here as cache is updated
         setIsEditingRecipeTitleModalVisible(false);
       } else {
-        throw new Error(result.error || '레시피 제목 업데이트에 실패했습니다.');
+        throw new Error(
+          result.errorMessage || '레시피 제목 업데이트에 실패했습니다.',
+        );
       }
     } catch (err) {
       const message =
@@ -125,21 +130,28 @@ function RecipeListScreen({
             if (result.success) {
               Alert.alert('성공', '레시피가 삭제되었습니다.');
               // Update the cache directly
-              utils.getAllRecipes.setData(undefined, oldData => {
-                if (!isSuccessRecipesResponse(oldData)) return oldData;
+              utils.recipe.getAllRecipes.setData(undefined, oldData => {
+                if (!oldData?.success) return oldData;
                 return {
                   ...oldData,
-                  recipes: oldData.recipes.filter(
-                    recipe => recipe.id !== recipeId,
-                  ),
+                  data: {
+                    ...oldData.data,
+                    recipes: oldData.data.recipes.filter(
+                      recipe => recipe.id !== recipeId,
+                    ),
+                  },
                 };
               });
             } else {
-              throw new Error(result.error || '레시피 삭제에 실패했습니다.');
+              throw new Error(
+                result.errorMessage || '레시피 삭제에 실패했습니다.',
+              );
             }
           } catch (err) {
             const message =
-              err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
+              err instanceof Error
+                ? err.message
+                : '알 수 없는 오류가 발생했습니다.';
             Alert.alert('오류', message);
           }
         },
@@ -164,7 +176,7 @@ function RecipeListScreen({
     );
   }
 
-  if (!data?.success) {
+  if (!allRecipes?.success) {
     return (
       <SafeAreaView style={[backgroundStyle, styles.centered]}>
         <Text style={styles.errorText}>
@@ -174,7 +186,8 @@ function RecipeListScreen({
     );
   }
 
-  const hasRecipes = data.recipes && data.recipes.length > 0;
+  const hasRecipes =
+    allRecipes.data.recipes && allRecipes.data.recipes.length > 0;
 
   return (
     <SafeAreaView style={backgroundStyle}>
@@ -184,7 +197,7 @@ function RecipeListScreen({
 
         {hasRecipes ? (
           <FlatList
-            data={data.recipes}
+            data={allRecipes.data.recipes}
             keyExtractor={item => item.id.toString()}
             renderItem={({ item }) => (
               <View style={styles.recipeItem}>

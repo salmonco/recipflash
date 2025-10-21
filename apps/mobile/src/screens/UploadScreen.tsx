@@ -13,6 +13,7 @@ import {
 import DocumentPicker, { types } from 'react-native-document-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Recipe } from '../models/Recipe';
+import { trpc } from '../trpc';
 
 type RootStackParamList = {
   Upload: undefined;
@@ -26,6 +27,8 @@ function UploadScreen({ navigation }: UploadScreenProps): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const createRecipeMutation = trpc.recipe.createRecipe.useMutation();
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? '#333' : '#F3F3F3',
@@ -54,20 +57,17 @@ function UploadScreen({ navigation }: UploadScreenProps): React.JSX.Element {
       // For iOS simulator, localhost is fine. For Android emulator, use 10.0.2.2
       const response = await fetch('http://localhost:4000/upload-recipe', {
         method: 'POST',
-        body: formData,
+        body: formData as any,
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
 
       if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(
-          errData.details || '파일 업로드 및 처리 중 오류가 발생했습니다.',
-        );
+        throw new Error('파일 업로드 및 처리 중 오류가 발생했습니다.');
       }
 
-      const result: Recipe = await response.json();
+      const result = (await response.json()) as Recipe;
       Alert.alert('성공', '메뉴가 생성되었습니다!');
       navigation.navigate('MenuList', {
         recipeId: result.id,
@@ -95,17 +95,12 @@ function UploadScreen({ navigation }: UploadScreenProps): React.JSX.Element {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:4000/create-recipe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ title: '레시피 모음 1' }),
+      const result = await createRecipeMutation.mutateAsync({
+        title: '레시피 모음 1',
       });
 
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.details || '레시피 생성에 실패했습니다.');
+      if (!result.success) {
+        throw new Error(result.errorMessage || '레시피 생성에 실패했습니다.');
       }
 
       Alert.alert('성공', '레시피가 생성되었습니다!');

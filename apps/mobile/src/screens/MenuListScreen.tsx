@@ -21,7 +21,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Menu } from '../models/Menu';
-import { SuccessRecipeResponse, trpc } from '../trpc';
+import { trpc } from '../trpc';
 
 type RootStackParamList = {
   RecipeList: undefined;
@@ -34,17 +34,17 @@ type MenuListScreenProps = NativeStackScreenProps<
   'MenuList'
 >;
 
-// Type predicate function
-function isSuccessRecipeResponse(data: any): data is SuccessRecipeResponse {
-  return data && data.success === true && data.recipe !== undefined;
-}
-
 function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
   const { recipeId, recipeTitle } = route.params;
   const isDarkMode = useColorScheme() === 'dark';
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { data, isLoading, error, refetch } = trpc.getRecipeById.useQuery({
+  const {
+    data: recipeById,
+    isLoading,
+    error,
+    refetch,
+  } = trpc.recipe.getRecipeById.useQuery({
     id: recipeId,
   });
   const utils = trpc.useUtils();
@@ -60,9 +60,9 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
   const [newMenuName, setNewMenuName] = useState('');
   const [newMenuIngredients, setNewMenuIngredients] = useState('');
 
-  const updateMenuMutation = trpc.updateMenu.useMutation();
-  const deleteMenuMutation = trpc.deleteMenu.useMutation();
-  const createMenuMutation = trpc.createMenu.useMutation();
+  const updateMenuMutation = trpc.menu.updateMenu.useMutation();
+  const deleteMenuMutation = trpc.menu.deleteMenu.useMutation();
+  const createMenuMutation = trpc.menu.createMenu.useMutation();
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? '#333' : '#F3F3F3',
@@ -70,8 +70,8 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
   };
 
   const handleRandomMemorization = () => {
-    if (data?.success && data.recipe.menus.length > 0) {
-      const shuffledMenus = [...data.recipe.menus].sort(
+    if (recipeById?.success && recipeById.data.menus.length > 0) {
+      const shuffledMenus = [...recipeById.data.menus].sort(
         () => Math.random() - 0.5,
       );
       navigation.navigate('CardSet', { menus: shuffledMenus });
@@ -108,13 +108,13 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
       if (result.success) {
         Alert.alert('성공', '메뉴가 성공적으로 수정되었습니다!');
         // Update the cache directly
-        utils.getRecipeById.setData({ id: recipeId }, oldData => {
-          if (!isSuccessRecipeResponse(oldData)) return oldData;
+        utils.recipe.getRecipeById.setData({ id: recipeId }, oldData => {
+          if (!oldData?.success) return oldData;
           return {
             ...oldData,
-            recipe: {
-              ...oldData.recipe,
-              menus: oldData.recipe.menus.map(menu =>
+            data: {
+              ...oldData.data,
+              menus: oldData.data.menus.map(menu =>
                 menu.id === editingMenuId
                   ? {
                       ...menu,
@@ -129,7 +129,7 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
         // No need to call refetch() here as cache is updated
         setIsEditingModalVisible(false);
       } else {
-        throw new Error(result.error || '메뉴 수정에 실패했습니다.');
+        throw new Error(result.errorMessage || '메뉴 수정에 실패했습니다.');
       }
     } catch (err) {
       const message =
@@ -152,13 +152,13 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
             if (result.success) {
               Alert.alert('성공', '메뉴가 삭제되었습니다.');
               // Update the cache directly
-              utils.getRecipeById.setData({ id: recipeId }, oldData => {
-                if (!isSuccessRecipeResponse(oldData)) return oldData;
+              utils.recipe.getRecipeById.setData({ id: recipeId }, oldData => {
+                if (!oldData?.success) return oldData;
                 return {
                   ...oldData,
-                  recipe: {
-                    ...oldData.recipe,
-                    menus: oldData.recipe.menus.filter(
+                  data: {
+                    ...oldData.data,
+                    menus: oldData.data.menus.filter(
                       menu => menu.id !== menuId,
                     ),
                   },
@@ -166,11 +166,15 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
               });
               // No need to call refetch() here as cache is updated
             } else {
-              throw new Error(result.error || '메뉴 삭제에 실패했습니다.');
+              throw new Error(
+                result.errorMessage || '메뉴 삭제에 실패했습니다.',
+              );
             }
           } catch (err) {
             const message =
-              err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
+              err instanceof Error
+                ? err.message
+                : '알 수 없는 오류가 발생했습니다.';
             Alert.alert('오류', message);
           }
         },
@@ -188,13 +192,13 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
 
       if (result.success) {
         Alert.alert('성공', '메뉴가 추가되었습니다!');
-        utils.getRecipeById.setData({ id: recipeId }, oldData => {
-          if (!isSuccessRecipeResponse(oldData)) return oldData;
+        utils.recipe.getRecipeById.setData({ id: recipeId }, oldData => {
+          if (!oldData?.success) return oldData;
           return {
             ...oldData,
-            recipe: {
-              ...oldData.recipe,
-              menus: [...oldData.recipe.menus, result.menu],
+            data: {
+              ...oldData.data,
+              menus: [...oldData.data.menus, result.data],
             },
           };
         });
@@ -202,7 +206,7 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
         setNewMenuName('');
         setNewMenuIngredients('');
       } else {
-        throw new Error(result.error || '메뉴 추가에 실패했습니다.');
+        throw new Error(result.errorMessage || '메뉴 추가에 실패했습니다.');
       }
     } catch (err) {
       const message =
@@ -228,7 +232,7 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
     );
   }
 
-  if (!data?.success) {
+  if (!recipeById?.success) {
     return (
       <SafeAreaView style={[backgroundStyle, styles.centered]}>
         <Text style={styles.errorText}>
@@ -244,14 +248,11 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
       <View style={styles.container}>
         <Text style={styles.title}>{recipeTitle}</Text>
         <View style={styles.buttonContainer}>
-          <Button
-            onPress={handleRandomMemorization}
-            title="랜덤 암기"
-          />
+          <Button onPress={handleRandomMemorization} title="랜덤 암기" />
         </View>
-        {data.recipe?.menus && data.recipe.menus.length > 0 ? (
+        {recipeById?.success && recipeById.data.menus.length > 0 ? (
           <FlatList
-            data={data.recipe.menus}
+            data={recipeById.data.menus}
             keyExtractor={item => item.id.toString()}
             renderItem={({ item }) => (
               <View style={styles.card}>

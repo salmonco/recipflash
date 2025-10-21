@@ -6,6 +6,7 @@ import { httpBatchLink } from '@trpc/client';
 import React, { useState } from 'react';
 import { trpc } from './src/trpc';
 
+import auth from '@react-native-firebase/auth';
 import { Menu } from './src/models/Menu';
 import CardSetScreen from './src/screens/CardSetScreen';
 import LoginScreen from './src/screens/LoginScreen';
@@ -27,6 +28,16 @@ const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
       url: 'http://localhost:4000/trpc', // Adjust to your backend URL
+      async headers() {
+        const user = auth().currentUser;
+        if (user) {
+          const token = await user.getIdToken();
+          return {
+            Authorization: `Bearer ${token}`,
+          };
+        }
+        return {};
+      },
     }),
   ],
 });
