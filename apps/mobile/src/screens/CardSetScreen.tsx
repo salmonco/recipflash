@@ -28,6 +28,15 @@ function CardSetScreen({ route }: CardSetScreenProps): React.JSX.Element {
   const [flipped, setFlipped] = useState(menus.map(() => false));
   const [flipAnimations] = useState(menus.map(() => new Animated.Value(0)));
   const [instructionAnimation] = useState(new Animated.Value(1));
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const onViewableItemsChanged = ({ viewableItems }: any) => {
+    if (viewableItems.length > 0) {
+      setCurrentIndex(viewableItems[0].index);
+    }
+  };
+
+  const viewabilityConfig = { itemVisiblePercentThreshold: 50 };
 
   useEffect(() => {
     const blinkAndFade = () => {
@@ -146,7 +155,14 @@ function CardSetScreen({ route }: CardSetScreenProps): React.JSX.Element {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
       />
+      <View style={styles.counterContainer}>
+        <Text style={styles.counterText}>
+          {currentIndex + 1} / {menus.length}
+        </Text>
+      </View>
     </SafeAreaView>
   );
 }
@@ -188,6 +204,18 @@ const styles = StyleSheet.create({
   instructionText: {
     marginTop: 20,
     fontSize: 16,
+    color: '#666',
+  },
+  counterContainer: {
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  counterText: {
+    fontSize: 18,
+    fontWeight: 'bold',
     color: '#666',
   },
 });
