@@ -1,3 +1,4 @@
+import { API_URL } from '@env';
 import auth from '@react-native-firebase/auth';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
@@ -61,7 +62,7 @@ const UploadScreen = ({ navigation }: UploadScreenProps) => {
         token = await user.getIdToken();
       }
 
-      const response = await fetch('http://localhost:4000/upload-recipe', {
+      const response = await fetch(`${API_URL}/upload-recipe`, {
         method: 'POST',
         body: formData as any,
         headers: {

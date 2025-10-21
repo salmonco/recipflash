@@ -1,3 +1,4 @@
+import { API_URL } from '@env';
 import auth from '@react-native-firebase/auth';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -28,7 +29,7 @@ const trpcClient = trpc.createClient({
   links: [
     customLink,
     httpBatchLink({
-      url: 'http://localhost:4000/trpc',
+      url: `${API_URL}/trpc`,
       async headers() {
         const user = auth().currentUser;
         if (user) {
