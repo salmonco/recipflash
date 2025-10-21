@@ -17,6 +17,10 @@ router.post(
       return res.status(400).send({ error: "No file uploaded." });
     }
 
+    if (req.file.mimetype !== "application/pdf") {
+      return res.status(400).send({ error: "Only PDF files are allowed." });
+    }
+
     const userId = req.userId;
     if (!userId) {
       return res.status(401).send({ error: "Unauthorized" });
