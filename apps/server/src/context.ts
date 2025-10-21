@@ -1,6 +1,7 @@
 import * as express from "express";
 import * as admin from "firebase-admin";
 import { PrismaClient } from "./generated/prisma";
+import { prisma } from "./prisma";
 
 export interface Context {
   prisma: PrismaClient;
@@ -12,8 +13,6 @@ export interface Context {
     updatedAt: Date;
   } | null;
 }
-
-const prisma = new PrismaClient();
 
 export const createContext = async ({
   req,
