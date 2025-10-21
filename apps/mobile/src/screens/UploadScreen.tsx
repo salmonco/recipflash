@@ -24,7 +24,7 @@ type RootStackParamList = {
 
 type UploadScreenProps = NativeStackScreenProps<RootStackParamList, 'Upload'>;
 
-function UploadScreen({ navigation }: UploadScreenProps): React.JSX.Element {
+const UploadScreen = ({ navigation }: UploadScreenProps) => {
   const isDarkMode = useColorScheme() === 'dark';
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -159,7 +159,7 @@ function UploadScreen({ navigation }: UploadScreenProps): React.JSX.Element {
       </View>
     </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {

@@ -31,9 +31,7 @@ type RecipeListScreenProps = NativeStackScreenProps<
   'RecipeList'
 >;
 
-function RecipeListScreen({
-  navigation,
-}: RecipeListScreenProps): React.JSX.Element {
+const RecipeListScreen = ({ navigation }: RecipeListScreenProps) => {
   const isDarkMode = useColorScheme() === 'dark';
   const {
     data: allRecipes,
@@ -287,7 +285,7 @@ function RecipeListScreen({
       </View>
     </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {

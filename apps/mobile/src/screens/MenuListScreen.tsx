@@ -34,7 +34,7 @@ type MenuListScreenProps = NativeStackScreenProps<
   'MenuList'
 >;
 
-function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
+const MenuListScreen = ({ route }: MenuListScreenProps) => {
   const { recipeId, recipeTitle } = route.params;
   const isDarkMode = useColorScheme() === 'dark';
   const navigation =
@@ -371,7 +371,7 @@ function MenuListScreen({ route }: MenuListScreenProps): React.JSX.Element {
       </View>
     </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {

@@ -1,23 +1,21 @@
+import auth from '@react-native-firebase/auth';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { httpBatchLink } from '@trpc/client';
-import React, { useState } from 'react';
-import { trpc } from './src/trpc';
-
-import auth from '@react-native-firebase/auth';
+import React, { useEffect, useState } from 'react';
 import { Menu } from './src/models/Menu';
 import CardSetScreen from './src/screens/CardSetScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import MenuListScreen from './src/screens/MenuListScreen';
 import RecipeListScreen from './src/screens/RecipeListScreen';
 import UploadScreen from './src/screens/UploadScreen';
+import { trpc } from './src/trpc';
 
 export type RootStackParamList = {
-  Upload: undefined; // No params for UploadScreen
-  RecipeList: undefined; // No params for RecipeListScreen
-  MenuList: { recipeId: number; recipeTitle: string }; // Params for MenuListScreen
+  Upload: undefined;
+  RecipeList: undefined;
+  MenuList: { recipeId: number; recipeTitle: string };
   CardSet: { menus: Menu[] };
 };
 
@@ -27,7 +25,7 @@ const queryClient = new QueryClient();
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: 'http://localhost:4000/trpc', // Adjust to your backend URL
+      url: 'http://localhost:4000/trpc',
       async headers() {
         const user = auth().currentUser;
         if (user) {
@@ -45,12 +43,18 @@ const trpcClient = trpc.createClient({
 function App(): React.JSX.Element {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+  useEffect(() => {
+    const unsubscribe = auth().onAuthStateChanged(user => {
+      setIsLoggedIn(!!user);
+    });
+
+    return unsubscribe;
+  }, []);
+
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
-        {!isLoggedIn ? (
-          <LoginScreen onLogin={() => setIsLoggedIn(true)} />
-        ) : (
+        {isLoggedIn ? (
           <NavigationContainer>
             <Stack.Navigator initialRouteName="RecipeList">
               <Stack.Screen
@@ -75,6 +79,8 @@ function App(): React.JSX.Element {
               />
             </Stack.Navigator>
           </NavigationContainer>
+        ) : (
+          <LoginScreen />
         )}
       </QueryClientProvider>
     </trpc.Provider>

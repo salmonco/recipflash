@@ -6,6 +6,17 @@ import {
   statusCodes,
 } from '@react-native-google-signin/google-signin';
 
+// Helper function to generate a nonce
+const generateNonce = (length: number) => {
+  const charset =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += charset.charAt(Math.floor(Math.random() * charset.length));
+  }
+  return result;
+};
+
 class AuthService {
   constructor() {
     GoogleSignin.configure({
@@ -15,25 +26,30 @@ class AuthService {
 
   async appleSignIn() {
     try {
+      const rawNonce = generateNonce(32);
       const appleAuthRequestResponse = await appleAuth.performRequest({
         requestedOperation: appleAuth.Operation.LOGIN,
         requestedScopes: [appleAuth.Scope.FULL_NAME, appleAuth.Scope.EMAIL],
+        nonce: rawNonce,
       });
 
-      const { identityToken, fullName } = appleAuthRequestResponse;
+      const { identityToken } = appleAuthRequestResponse;
 
       if (!identityToken) {
         throw new Error('Apple Sign-In failed: No identity token received');
       }
 
-      // The full name is only provided on the first authorization
-      const name = fullName
-        ? `${fullName.givenName} ${fullName.familyName}`
-        : null;
+      const appleCredential = auth.AppleAuthProvider.credential(
+        identityToken,
+        rawNonce,
+      );
 
-      // Here you would typically call your backend to verify the token and sign in the user
-      // For now, we'll just return the token and name
-      return { identityToken, name };
+      const firebaseUserCredential = await auth().signInWithCredential(
+        appleCredential,
+      );
+
+      const firebaseIdToken = await firebaseUserCredential.user.getIdToken();
+      return firebaseIdToken;
     } catch (error: any) {
       if (error.code === appleAuth.Error.CANCELED) {
         console.log('User cancelled Apple Sign-In');
@@ -48,6 +64,9 @@ class AuthService {
     try {
       await GoogleSignin.hasPlayServices();
       const { idToken } = await GoogleSignin.signIn();
+      if (!idToken) {
+        throw new Error('Google Sign-In failed: No ID token received');
+      }
       const googleCredential = auth.GoogleAuthProvider.credential(idToken);
       const firebaseUserCredential = await auth().signInWithCredential(
         googleCredential,
@@ -56,11 +75,7 @@ class AuthService {
       return firebaseIdToken;
     } catch (error: any) {
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        console.log('User cancelled the login flow');
-      } else if (error.code === statusCodes.IN_PROGRESS) {
-        console.log('Sign in is in progress already');
-      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        console.log('Play services not available or outdated');
+        console.log('User cancelled Google Sign-In');
       } else {
         console.error('Google Sign-In Error:', error);
       }
@@ -69,4 +84,6 @@ class AuthService {
   }
 }
 
-export default new AuthService();
+const authService = new AuthService();
+
+export { authService };

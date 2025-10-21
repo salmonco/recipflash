@@ -22,7 +22,7 @@ type CardSetScreenProps = NativeStackScreenProps<RootStackParamList, 'CardSet'>;
 
 const { width } = Dimensions.get('window');
 
-function CardSetScreen({ route }: CardSetScreenProps): React.JSX.Element {
+const CardSetScreen = ({ route }: CardSetScreenProps) => {
   const { menus } = route.params;
   const isDarkMode = useColorScheme() === 'dark';
   const [flipped, setFlipped] = useState(menus.map(() => false));
@@ -165,7 +165,7 @@ function CardSetScreen({ route }: CardSetScreenProps): React.JSX.Element {
       </View>
     </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   cardContainer: {

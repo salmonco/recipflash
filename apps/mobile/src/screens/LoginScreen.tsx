@@ -4,29 +4,22 @@ import {
 } from '@invertase/react-native-apple-authentication';
 import React from 'react';
 import { Alert, Button, Platform, View } from 'react-native';
-import authService from '../services/authService';
+import { authService } from '../services/authService';
 import { trpc } from '../trpc';
 
-interface Props {
-  onLogin: () => void;
-}
-
-const LoginScreen: React.FC<Props> = ({ onLogin }) => {
-  const googleLoginMutation = trpc.auth.googleLogin.useMutation();
-  const appleLoginMutation = trpc.auth.appleLogin.useMutation();
+const LoginScreen = () => {
+  const firebaseSignInMutation = trpc.auth.firebaseSignIn.useMutation();
 
   const handleGoogleSignIn = async () => {
     try {
       const idToken = await authService.googleSignIn();
       if (idToken) {
-        googleLoginMutation.mutate(
+        firebaseSignInMutation.mutate(
           { idToken },
           {
             onSuccess: data => {
-              if ('user' in data) {
-                onLogin();
-              } else {
-                Alert.alert('Login Failed', data.error);
+              if (!data.success) {
+                Alert.alert('Login Failed');
               }
             },
             onError: error => {
@@ -36,22 +29,20 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
         );
       }
     } catch (error: any) {
-      Alert.alert('Sign-in Error', error.message);
+      Alert.alert('Login Error', error.message);
     }
   };
 
   const handleAppleSignIn = async () => {
     try {
-      const { identityToken, name } = await authService.appleSignIn();
-      if (identityToken) {
-        appleLoginMutation.mutate(
-          { identityToken, name },
+      const idToken = await authService.appleSignIn();
+      if (idToken) {
+        firebaseSignInMutation.mutate(
+          { idToken },
           {
             onSuccess: data => {
-              if ('user' in data) {
-                onLogin();
-              } else {
-                Alert.alert('Login Failed', data.error);
+              if (!data.success) {
+                Alert.alert('Login Failed');
               }
             },
             onError: error => {
@@ -61,7 +52,7 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
         );
       }
     } catch (error: any) {
-      Alert.alert('Sign-in Error', error.message);
+      Alert.alert('Login Error', error.message);
     }
   };
 
