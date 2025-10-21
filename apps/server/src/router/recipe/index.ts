@@ -15,9 +15,13 @@ type RecipesResponse = {
 
 export const recipeRouter = router({
   getAllRecipes: protectedProcedure.query(
-    async (): Promise<SuccessResponse<RecipesResponse> | ErrorResponse> => {
+    async ({
+      ctx,
+    }): Promise<SuccessResponse<RecipesResponse> | ErrorResponse> => {
+      const userId = ctx.user.id;
       try {
         const recipes = await prisma.recipe.findMany({
+          where: { userId: userId },
           include: { menus: true }, // Include associated menus
         });
         return { success: true, data: { recipes } };
@@ -35,17 +39,19 @@ export const recipeRouter = router({
     .query(
       async ({
         input,
+        ctx,
       }): Promise<SuccessResponse<RecipeResponse> | ErrorResponse> => {
         const { id } = input;
+        const userId = ctx.user.id;
         try {
-          const recipe = await prisma.recipe.findUnique({
-            where: { id },
+          const recipe = await prisma.recipe.findFirst({
+            where: { id: id, userId: userId },
             include: { menus: true }, // Include associated menus
           });
           if (!recipe) {
             return {
               success: false,
-              errorCode: 500,
+              errorCode: 404,
               errorMessage: "Recipe not found.",
             };
           }
