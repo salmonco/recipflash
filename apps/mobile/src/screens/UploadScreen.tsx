@@ -1,3 +1,4 @@
+import auth from '@react-native-firebase/auth';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
 import {
@@ -54,12 +55,18 @@ function UploadScreen({ navigation }: UploadScreenProps): React.JSX.Element {
       });
 
       // 3. Upload the file to the backend
-      // For iOS simulator, localhost is fine. For Android emulator, use 10.0.2.2
+      const user = auth().currentUser;
+      let token = null;
+      if (user) {
+        token = await user.getIdToken();
+      }
+
       const response = await fetch('http://localhost:4000/upload-recipe', {
         method: 'POST',
         body: formData as any,
         headers: {
           'Content-Type': 'multipart/form-data',
+          ...(token && { Authorization: `Bearer ${token}` }),
         },
       });
 

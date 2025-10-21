@@ -64,12 +64,15 @@ export const recipeRouter = router({
     .mutation(
       async ({
         input,
+        ctx,
       }): Promise<SuccessResponse<RecipeResponse> | ErrorResponse> => {
         const { title } = input;
+        const userId = ctx.user.id;
         try {
           const newRecipe = await prisma.recipe.create({
             data: {
               title: title || "레시피 모음 1",
+              userId: userId,
             },
             include: { menus: true }, // Include associated menus
           });
