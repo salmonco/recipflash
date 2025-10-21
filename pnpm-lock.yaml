@@ -19,6 +19,9 @@ importers:
 
   apps/mobile:
     dependencies:
+      '@invertase/react-native-apple-authentication':
+        specifier: ^2.4.1
+        version: 2.4.1
       '@react-native-firebase/app':
         specifier: ^20.1.0
         version: 20.5.0(react-native@0.82.0(@babel/core@7.28.4)(@react-native-community/cli@20.0.0(typescript@5.9.3))(@react-native/metro-config@0.82.0(@babel/core@7.28.4))(@types/react@19.2.2)(react@19.1.1))(react@19.1.1)
@@ -149,6 +152,12 @@ importers:
       firebase-admin:
         specifier: ^12.1.1
         version: 12.7.0
+      jsonwebtoken:
+        specifier: ^9.0.2
+        version: 9.0.2
+      jwks-rsa:
+        specifier: ^3.2.0
+        version: 3.2.0
       jwt-decode:
         specifier: ^4.0.0
         version: 4.0.0
@@ -1157,6 +1166,10 @@ packages:
   '@ibm-cloud/watsonx-ai@1.7.0':
     resolution: {integrity: sha512-TmLaoFXmLc7yVFJIQS25mzZcuWfju4JmRXcO62KthDKNENyPpXXJukrHN6gXfv1BotzFt0M2kyRnO1Vt8ZLlxQ==}
     engines: {node: '>=18.0.0'}
+
+  '@invertase/react-native-apple-authentication@2.4.1':
+    resolution: {integrity: sha512-SzWXS/T6H62ScTX+jMLJFLAcBp2p8P30J5uQEimpLMUolqnv/iAljfpwTvZYaniVmMSUXjG0/N95ScUIcmsYRQ==}
+    engines: {node: '>=14'}
 
   '@isaacs/ttlcache@1.4.1':
     resolution: {integrity: sha512-RQgQ4uQ+pLbqXfOmieB91ejmLwvSgv9nLx6sT6sD83s7umBypgg+OIBOBbEUiJXrfpnp9j0mRhYYdzp9uqq3lA==}
@@ -6794,6 +6807,8 @@ snapshots:
       ibm-cloud-sdk-core: 5.4.3
     transitivePeerDependencies:
       - supports-color
+
+  '@invertase/react-native-apple-authentication@2.4.1': {}
 
   '@isaacs/ttlcache@1.4.1': {}
 

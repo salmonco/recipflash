@@ -2493,6 +2493,8 @@ PODS:
     - React-utils (= 0.82.0)
     - SocketRocket
   - RecaptchaInterop (100.0.0)
+  - RNAppleAuthentication (2.4.1):
+    - React-Core
   - RNFBApp (20.5.0):
     - Firebase/CoreOnly (= 10.29.0)
     - React-Core
@@ -2695,6 +2697,7 @@ DEPENDENCIES:
   - ReactAppDependencyProvider (from `build/generated/ios`)
   - ReactCodegen (from `build/generated/ios`)
   - ReactCommon/turbomodule/core (from `../../../node_modules/react-native/ReactCommon`)
+  - "RNAppleAuthentication (from `../../../node_modules/@invertase/react-native-apple-authentication`)"
   - "RNFBApp (from `../../../node_modules/@react-native-firebase/app`)"
   - "RNFBAuth (from `../../../node_modules/@react-native-firebase/auth`)"
   - "RNGoogleSignin (from `../../../node_modules/@react-native-google-signin/google-signin`)"
@@ -2869,6 +2872,8 @@ EXTERNAL SOURCES:
     :path: build/generated/ios
   ReactCommon:
     :path: "../../../node_modules/react-native/ReactCommon"
+  RNAppleAuthentication:
+    :path: "../../../node_modules/@invertase/react-native-apple-authentication"
   RNFBApp:
     :path: "../../../node_modules/@react-native-firebase/app"
   RNFBAuth:
@@ -2969,6 +2974,7 @@ SPEC CHECKSUMS:
   ReactCodegen: daaa36736de5c1e2e76ba2af9b1572e193015a71
   ReactCommon: f5527f5d97a9957ab46eb5db78875d3579e03b97
   RecaptchaInterop: 7d1a4a01a6b2cb1610a47ef3f85f0c411434cb21
+  RNAppleAuthentication: c3dddf5918126c9aae85dc2e2ce9fb87835e9e04
   RNFBApp: 0e66b9f844efdf2ac3fa2b30e64c9db41a263b3d
   RNFBAuth: a33d15faa7f061c350c0744ee9ee2897ee102cf3
   RNGoogleSignin: e31759fbae0ded5008bfe33904f12b23b20f015a
