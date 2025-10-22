@@ -114,8 +114,6 @@ WEB_CLIENT_ID=~~~.apps.googleusercontent.com
 
     ```bash
     cd apps/ai
-    pnpm install
-    
     pnpm dev
     ```
 
@@ -124,8 +122,6 @@ WEB_CLIENT_ID=~~~.apps.googleusercontent.com
 
     ```bash
     cd apps/server
-    pnpm install
-    
     pnpm dev
     ```
 
@@ -136,7 +132,6 @@ WEB_CLIENT_ID=~~~.apps.googleusercontent.com
 
     ```bash
     cd apps/mobile
-    pnpm install
     cd ios
     pod install
     cd ../
