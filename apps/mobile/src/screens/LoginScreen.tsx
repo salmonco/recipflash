@@ -3,9 +3,19 @@ import {
   AppleButton,
 } from '@invertase/react-native-apple-authentication';
 import React from 'react';
-import { Alert, Button, Platform, View } from 'react-native';
+import {
+  Alert,
+  Button,
+  Linking,
+  Platform,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { authService } from '../services/authService';
 import { trpc } from '../trpc';
+
+const PRIVACY_POLICY_URL = 'https://slashpage.com/recipflash/privacy';
 
 const LoginScreen = () => {
   const firebaseSignInMutation = trpc.auth.firebaseSignIn.useMutation();
@@ -56,23 +66,44 @@ const LoginScreen = () => {
     }
   };
 
+  const handlePrivacyPolicyPress = () => {
+    Linking.openURL(PRIVACY_POLICY_URL);
+  };
+
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+    <View style={styles.container}>
       <Button title="Sign in with Google" onPress={handleGoogleSignIn} />
       {Platform.OS === 'ios' && appleAuth.isSupported && (
         <AppleButton
           buttonStyle={AppleButton.Style.BLACK}
           buttonType={AppleButton.Type.SIGN_IN}
-          style={{
-            width: 160,
-            height: 45,
-            marginTop: 10,
-          }}
+          style={styles.appleButton}
           onPress={handleAppleSignIn}
         />
       )}
+      <Text style={styles.privacyPolicyText} onPress={handlePrivacyPolicyPress}>
+        개인정보처리방침
+      </Text>
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  appleButton: {
+    width: 160,
+    height: 45,
+    marginTop: 10,
+  },
+  privacyPolicyText: {
+    marginTop: 20,
+    color: 'blue',
+    textDecorationLine: 'underline',
+  },
+});
 
 export default LoginScreen;
