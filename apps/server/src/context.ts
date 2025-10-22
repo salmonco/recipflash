@@ -49,6 +49,7 @@ export const createContext = async ({
             provider: provider,
             providerId: decodedToken.uid,
           },
+          user: { deletedAt: null }, // Only find active users
         },
         include: { user: true },
       });

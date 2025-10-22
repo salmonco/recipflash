@@ -5,11 +5,14 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { httpBatchLink } from '@trpc/client';
 import React, { useEffect, useState } from 'react';
+import { Pressable } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Menu } from './src/models/Menu';
 import CardSetScreen from './src/screens/CardSetScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import MenuListScreen from './src/screens/MenuListScreen';
 import RecipeListScreen from './src/screens/RecipeListScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
 import UploadScreen from './src/screens/UploadScreen';
 import { trpc } from './src/trpc';
 import { customLink } from './src/trpc/customLink';
@@ -19,6 +22,7 @@ export type RootStackParamList = {
   RecipeList: undefined;
   MenuList: { recipeId: number; recipeTitle: string };
   CardSet: { menus: Menu[] };
+  Settings: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -65,7 +69,14 @@ function App(): React.JSX.Element {
               <Stack.Screen
                 name="RecipeList"
                 component={RecipeListScreen}
-                options={{ title: '모든 레시피' }}
+                options={({ navigation }) => ({
+                  title: '모든 레시피',
+                  headerRight: () => (
+                    <Pressable onPress={() => navigation.navigate('Settings')}>
+                      <Icon name="settings" size={24} color="black" />
+                    </Pressable>
+                  ),
+                })}
               />
               <Stack.Screen
                 name="Upload"
@@ -81,6 +92,11 @@ function App(): React.JSX.Element {
                 name="CardSet"
                 component={CardSetScreen}
                 options={{ title: '카드 세트' }}
+              />
+              <Stack.Screen
+                name="Settings"
+                component={SettingsScreen}
+                options={{ title: '설정' }}
               />
             </Stack.Navigator>
           </NavigationContainer>

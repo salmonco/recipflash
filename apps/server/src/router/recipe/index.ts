@@ -102,13 +102,14 @@ export const recipeRouter = router({
     .mutation(
       async ({
         input,
+        ctx,
       }): Promise<SuccessResponse<RecipeResponse> | ErrorResponse> => {
         const { id, title } = input;
         try {
           const updatedRecipe = await prisma.recipe.update({
-            where: { id },
+            where: { id, userId: ctx.user.id },
             data: { title },
-            include: { menus: true }, // Add this line
+            include: { menus: true },
           });
           return { success: true, data: updatedRecipe };
         } catch (error) {
@@ -122,18 +123,20 @@ export const recipeRouter = router({
 
   deleteRecipe: protectedProcedure
     .input(z.object({ id: z.number() }))
-    .mutation(async ({ input }): Promise<SuccessResponse | ErrorResponse> => {
-      const { id } = input;
-      try {
-        await prisma.recipe.delete({
-          where: { id },
-        });
-        return { success: true, data: undefined };
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Unknown error";
-        console.error("Error deleting recipe:", message);
-        return { success: false, errorCode: 500, errorMessage: message };
+    .mutation(
+      async ({ input, ctx }): Promise<SuccessResponse | ErrorResponse> => {
+        const { id } = input;
+        try {
+          await prisma.recipe.delete({
+            where: { id, userId: ctx.user.id },
+          });
+          return { success: true, data: undefined };
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : "Unknown error";
+          console.error("Error deleting recipe:", message);
+          return { success: false, errorCode: 500, errorMessage: message };
+        }
       }
-    }),
+    ),
 });
