@@ -31,11 +31,8 @@ Recipflash는 알바에서 잘리기 않기 위해 제작한 레시피 외우기
 | **AI 서버**             | Python                                         | AI/ML 라이브러리 및 생태계의 풍부함                            |
 |                         | LangChain                                      | LLM 애플리케이션 개발을 위한 프레임워크                        |
 |                         | Ollama                                         | 로컬 LLM 모델 실행 및 관리                                     |
-
-### 개발 환경
-
-- **모노레포:** TurboRepo
-- **패키지 매니저:** pnpm
+| **개발 환경**             | TurboRepo                                      | 모노레포 구성                                           |
+|                         | pnpm                                         | 패키지 매니저                                                    |
 
 ## 시작하기
 
@@ -67,28 +64,24 @@ Recipflash는 알바에서 잘리기 않기 위해 제작한 레시피 외우기
 #### `apps/server/.env`
 
 ```env
-DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE?schema=public"
-FIREBASE_SERVICE_ACCOUNT_KEY="<Firebase Admin SDK 서비스 계정 키 JSON 내용>"
+DATABASE_URL="postgresql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}?sslmode=require"
+FIREBASE_SERVICE_ACCOUNT_KEY='{Firebase Admin SDK 서비스 계정 키 JSON 내용}'
+AWS_S3_BUCKET_URL="https://{BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com"
 ```
 
 - `DATABASE_URL`: PostgreSQL 데이터베이스 연결 문자열.
 - `FIREBASE_SERVICE_ACCOUNT_KEY`: Firebase Admin SDK에서 발급받은 서비스 계정 키 JSON 파일의 내용을 직접 붙여넣습니다. (줄바꿈 포함)
+- `AWS_S3_BUCKET_URL`: 업로드한 파일이 저장되길 원하는 경로. (여기에선 AWS S3 이용)
 
 #### `apps/mobile/.env`
 
 ```env
-API_URL="http://localhost:3000" # 또는 배포된 서버의 URL
-FIREBASE_API_KEY="<YOUR_FIREBASE_API_KEY>"
-FIREBASE_AUTH_DOMAIN="<YOUR_FIREBASE_AUTH_DOMAIN>"
-FIREBASE_PROJECT_ID="<YOUR_FIREBASE_PROJECT_ID>"
-FIREBASE_STORAGE_BUCKET="<YOUR_FIREBASE_STORAGE_BUCKET>"
-FIREBASE_MESSAGING_SENDER_ID="<YOUR_FIREBASE_MESSAGING_SENDER_ID>"
-FIREBASE_APP_ID="<YOUR_FIREBASE_APP_ID>"
-FIREBASE_MEASUREMENT_ID="<YOUR_FIREBASE_MEASUREMENT_ID>"
+API_URL=http://localhost:4000
+WEB_CLIENT_ID=~~~.apps.googleusercontent.com
 ```
 
-- `API_URL`: 백엔드 서버의 URL입니다. 개발 환경에서는 `http://localhost:3000`을 사용합니다.
-- 나머지 `FIREBASE_` 변수들은 Firebase 프로젝트 설정에서 확인할 수 있는 모바일 앱용 Firebase 구성 정보입니다.
+- `API_URL`: 백엔드 서버의 URL입니다. 개발 환경에서는 `http://localhost:4000`을 사용합니다.
+- `WEB_CLIENT_ID`: Firebase > Authentication > 로그인 제공업체 > 구글 > 웹 SDK 구성 > 웹 클라이언트 ID
 
 ### 데이터베이스 설정
 
@@ -110,22 +103,44 @@ FIREBASE_MEASUREMENT_ID="<YOUR_FIREBASE_MEASUREMENT_ID>"
 
 ### 애플리케이션 실행
 
-1.  **백엔드 서버 실행:**
+1.  **AI 서버 실행:**
+    우선 Ollama를 설치하고, 모델을 설치하여 실행합니다.
+
+    ```bash
+    ollama run llama3
+    ```
+    
+    그 다음 `apps/ai` 디렉토리에서 다음 명령어를 실행합니다.
+
+    ```bash
+    cd apps/ai
+    pnpm install
+    
+    pnpm dev
+    ```
+
+2.  **백엔드 서버 실행:**
     `apps/server` 디렉토리에서 다음 명령어를 실행합니다.
 
     ```bash
     cd apps/server
+    pnpm install
+    
     pnpm dev
-    cd ../..
     ```
 
     서버는 기본적으로 `http://localhost:4000`에서 실행됩니다.
 
-2.  **모바일 애플리케이션 실행:**
+3.  **모바일 애플리케이션 실행:**
     `apps/mobile` 디렉토리에서 다음 명령어를 실행합니다.
 
     ```bash
     cd apps/mobile
+    pnpm install
+    cd ios
+    pod install
+    cd ../
+    
     npx react-native run-ios # iOS 시뮬레이터 실행
     # 또는
     npx react-native run-android # Android 에뮬레이터 실행
