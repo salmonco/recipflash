@@ -19,24 +19,11 @@ export const authenticateUser = async (
   const idToken = authHeader.split("Bearer ")[1];
   try {
     const decodedToken = await admin.auth().verifyIdToken(idToken);
-    let provider = "unknown";
+    let provider: string;
     if (decodedToken.firebase?.sign_in_provider) {
-      switch (decodedToken.firebase.sign_in_provider) {
-        case "google.com":
-          provider = "google";
-          break;
-        case "apple.com":
-          provider = "apple";
-          break;
-        default:
-          provider = decodedToken.firebase.sign_in_provider.split(".")[0];
-      }
-    } else if (decodedToken.iss) {
-      if (decodedToken.iss.includes("accounts.google.com")) {
-        provider = "google";
-      } else if (decodedToken.iss.includes("appleid.apple.com")) {
-        provider = "apple";
-      }
+      provider = decodedToken.firebase.sign_in_provider;
+    } else {
+      provider = "firebase"; // Generic fallback if sign_in_provider is not explicitly set
     }
 
     const account = await prisma.account.findUnique({
