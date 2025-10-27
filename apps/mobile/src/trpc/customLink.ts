@@ -13,7 +13,6 @@ export const customLink: TRPCLink<AppRouter> = () => {
       console.log('performing operation:', op);
       const unsubscribe = next(op).subscribe({
         next(value) {
-          console.log('we received value', value);
           observer.next(value);
         },
         error(err) {
