@@ -82,3 +82,7 @@ yarn-error.log
 # Firebase client configuration files
 android/app/google-services.json
 ios/GoogleService-Info.plist
+# hot-updater
+.env.hotupdater
+# hot-updater
+.hot-updater/output

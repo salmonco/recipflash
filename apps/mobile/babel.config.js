@@ -4,14 +4,13 @@ module.exports = {
     [
       'module:react-native-dotenv',
       {
-        env: [
-          'WEB_CLIENT_ID',
-        ],
+        env: ['WEB_CLIENT_ID'],
         moduleName: '@env',
         path: '.env',
         safe: false,
         allowUndefined: true,
       },
     ],
+    'hot-updater/babel-plugin',
   ],
 };
