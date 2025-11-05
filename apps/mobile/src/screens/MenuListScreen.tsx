@@ -411,12 +411,15 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.title,
+    flex: 1,
+    marginRight: 16,
   },
   randomButton: {
     backgroundColor: colors.primary,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 20,
+    flexShrink: 0,
   },
   randomButtonText: {
     ...typography.subtitle,
