@@ -16,6 +16,7 @@ import DocumentPicker, { types } from 'react-native-document-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Recipe } from '../models/Recipe';
 import { trpc } from '../trpc';
+import { trackEvent } from '../utils/tracker';
 
 type RootStackParamList = {
   Upload: undefined;
@@ -38,6 +39,7 @@ const UploadScreen = ({ navigation }: UploadScreenProps) => {
   };
 
   const handleUpload = async () => {
+    trackEvent('ai_upload_button_clicked');
     setError(null);
     setIsLoading(true);
 
@@ -99,6 +101,7 @@ const UploadScreen = ({ navigation }: UploadScreenProps) => {
   };
 
   const handleManualCreate = async () => {
+    trackEvent('manual_create_button_clicked');
     setError(null);
     setIsLoading(true);
 

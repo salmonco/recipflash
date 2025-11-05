@@ -3,11 +3,13 @@ import React from 'react';
 import { Alert, Button, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { trpc } from '../trpc';
+import { trackEvent } from '../utils/tracker';
 
 const SettingsScreen = () => {
   const deleteUserMutation = trpc.auth.deleteUser.useMutation();
 
   const handleDeleteAccount = async () => {
+    trackEvent('account_deletion_click');
     Alert.alert(
       '계정 탈퇴',
       '정말로 계정을 탈퇴하시겠습니까? 모든 데이터가 삭제됩니다.',
@@ -17,6 +19,7 @@ const SettingsScreen = () => {
           text: '탈퇴',
           style: 'destructive',
           onPress: async () => {
+            trackEvent('account_deletion_success');
             try {
               const currentUser = auth().currentUser;
               if (!currentUser) {

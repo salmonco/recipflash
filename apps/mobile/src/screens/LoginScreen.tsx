@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { authService } from '../services/authService';
 import { trpc } from '../trpc';
+import { trackEvent } from '../utils/tracker';
 
 const PRIVACY_POLICY_URL = 'https://slashpage.com/recipflash/privacy';
 
@@ -21,6 +22,7 @@ const LoginScreen = () => {
   const firebaseSignInMutation = trpc.auth.firebaseSignIn.useMutation();
 
   const handleGoogleSignIn = async () => {
+    trackEvent('google_sign_in_button_clicked');
     try {
       const idToken = await authService.googleSignIn();
       if (idToken) {
@@ -39,11 +41,12 @@ const LoginScreen = () => {
         );
       }
     } catch (error: any) {
-      Alert.alert('Login Error', error.message);
+      console.log('Google Sign-In Error:', error);
     }
   };
 
   const handleAppleSignIn = async () => {
+    trackEvent('apple_sign_in_button_clicked');
     try {
       const idToken = await authService.appleSignIn();
       if (idToken) {
@@ -62,11 +65,12 @@ const LoginScreen = () => {
         );
       }
     } catch (error: any) {
-      Alert.alert('Login Error', error.message);
+      console.log('Apple Sign-In Error:', error);
     }
   };
 
   const handlePrivacyPolicyPress = () => {
+    trackEvent('privacy_policy_clicked');
     Linking.openURL(PRIVACY_POLICY_URL);
   };
 

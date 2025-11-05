@@ -1,11 +1,15 @@
 import { API_URL } from '@env';
-import { HotUpdater, getUpdateSource } from '@hot-updater/react-native';
+import { getUpdateSource, HotUpdater } from '@hot-updater/react-native';
 import auth from '@react-native-firebase/auth';
-import { NavigationContainer } from '@react-navigation/native';
+import {
+  createNavigationContainerRef,
+  NavigationContainer,
+  NavigationState,
+} from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { httpBatchLink } from '@trpc/client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Menu } from './src/models/Menu';
@@ -17,6 +21,14 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import UploadScreen from './src/screens/UploadScreen';
 import { trpc } from './src/trpc';
 import { customLink } from './src/trpc/customLink';
+import { trackAppStart, trackScreenView } from './src/utils/tracker';
+import * as amplitude from '@amplitude/analytics-react-native';
+
+if (process.env.AMPLITUDE_API_KEY) {
+  amplitude.init(process.env.AMPLITUDE_API_KEY, undefined, {
+    disableCookies: true,
+  });
+}
 
 export type RootStackParamList = {
   Upload: undefined;
@@ -49,23 +61,64 @@ const trpcClient = trpc.createClient({
   ],
 });
 
+export const navigationRef = createNavigationContainerRef<RootStackParamList>();
+
 function App(): React.JSX.Element {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const routeNameRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     const unsubscribe = auth().onAuthStateChanged(user => {
       console.log('Auth state changed. User:', user);
       setIsLoggedIn(!!user);
     });
-
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    trackAppStart();
+  }, []);
+
+  useEffect(() => {
+    const state = navigationRef.current?.getRootState();
+
+    if (state) {
+      routeNameRef.current = getActiveRouteName(state);
+    }
+  }, []);
+
+  const getActiveRouteName = (state: NavigationState) => {
+    const route = state.routes[state.index];
+
+    if (route.state) {
+      return getActiveRouteName(route.state as NavigationState);
+    }
+
+    return route.name;
+  };
+
+  const onStateChange = async (state: NavigationState | undefined) => {
+    if (state === undefined) return;
+
+    const previousRouteName = routeNameRef.current;
+    const currentRouteName = getActiveRouteName(state);
+
+    if (previousRouteName !== currentRouteName) {
+      // Google Analytics에 스크린 전송
+      trackScreenView({ screenName: currentRouteName });
+    }
+
+    routeNameRef.current = currentRouteName;
+  };
 
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         {isLoggedIn ? (
-          <NavigationContainer>
+          <NavigationContainer
+            ref={navigationRef}
+            onStateChange={onStateChange}
+          >
             <Stack.Navigator initialRouteName="RecipeList">
               <Stack.Screen
                 name="RecipeList"

@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Recipe } from '../models/Recipe';
 import { trpc } from '../trpc';
+import { trackEvent } from '../utils/tracker';
 
 type RootStackParamList = {
   RecipeList: undefined;
@@ -65,6 +66,7 @@ const RecipeListScreen = ({ navigation }: RecipeListScreenProps) => {
   );
 
   const handleEditRecipeTitlePress = (recipe: Recipe) => {
+    trackEvent('edit_recipe_title_click');
     setEditingRecipeId(recipe.id);
     setEditingRecipeTitle(recipe.title);
     setIsEditingRecipeTitleModalVisible(true);
@@ -115,6 +117,7 @@ const RecipeListScreen = ({ navigation }: RecipeListScreenProps) => {
   };
 
   const handleDeleteRecipe = (recipeId: number) => {
+    trackEvent('delete_recipe_click');
     Alert.alert('레시피 삭제', '이 레시피와 모든 메뉴를 삭제하시겠습니까?', [
       { text: '취소', style: 'cancel' },
       {
@@ -201,12 +204,13 @@ const RecipeListScreen = ({ navigation }: RecipeListScreenProps) => {
               <View style={styles.recipeItem}>
                 <Pressable
                   style={styles.recipeTitleContainer}
-                  onPress={() =>
+                  onPress={() => {
+                    trackEvent('recipe_item_click');
                     navigation.navigate('MenuList', {
                       recipeId: item.id,
                       recipeTitle: item.title,
-                    })
-                  }
+                    });
+                  }}
                 >
                   <Text style={styles.recipeTitle}>{item.title}</Text>
                   <Text style={styles.recipeMenuCount}>
@@ -237,7 +241,10 @@ const RecipeListScreen = ({ navigation }: RecipeListScreenProps) => {
             </Text>
             <Button
               title="새 레시피 업로드"
-              onPress={() => navigation.navigate('Upload')}
+              onPress={() => {
+                trackEvent('no_recipe_upload_button_click');
+                navigation.navigate('Upload');
+              }}
             />
           </View>
         )}
@@ -245,7 +252,10 @@ const RecipeListScreen = ({ navigation }: RecipeListScreenProps) => {
         {/* Floating Action Button */}
         <Pressable
           style={styles.fab}
-          onPress={() => navigation.navigate('Upload')}
+          onPress={() => {
+            trackEvent('fab_upload_button_click');
+            navigation.navigate('Upload');
+          }}
         >
           <Text style={styles.fabText}>+</Text>
         </Pressable>

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Menu } from '../models/Menu';
+import { trackEvent } from '../utils/tracker';
 
 type RootStackParamList = {
   MenuList: { recipeId: number; recipeTitle: string };
@@ -111,7 +112,12 @@ const CardSetScreen = ({ route }: CardSetScreenProps) => {
 
     return (
       <View style={styles.cardContainer}>
-        <TouchableOpacity onPress={() => flipCard(index)}>
+        <TouchableOpacity
+          onPress={() => {
+            trackEvent('card_flip', { menuId: item.id, menuName: item.name });
+            flipCard(index);
+          }}
+        >
           <Animated.View
             style={[styles.card, styles.cardFront, frontAnimatedStyle]}
           >

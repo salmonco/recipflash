@@ -12,8 +12,10 @@
     "deploy": "hot-updater deploy -i"
   },
   "dependencies": {
+    "@amplitude/analytics-react-native": "^1.5.16",
     "@hot-updater/react-native": "0.21.0",
     "@invertase/react-native-apple-authentication": "^2.4.1",
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-firebase/app": "^20.1.0",
     "@react-native-firebase/auth": "^20.1.0",
     "@react-native-google-signin/google-signin": "^12.2.1",
@@ -25,6 +27,7 @@
     "@trpc/react-query": "^11.6.0",
     "react": "19.1.1",
     "react-native": "0.82.0",
+    "react-native-device-info": "^14.1.1",
     "react-native-document-picker": "^9.3.1",
     "react-native-safe-area-context": "^5.5.2",
     "react-native-screens": "^4.17.1",

@@ -22,6 +22,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Menu } from '../models/Menu';
 import { trpc } from '../trpc';
+import { trackEvent } from '../utils/tracker';
 
 type RootStackParamList = {
   RecipeList: undefined;
@@ -70,6 +71,7 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
   };
 
   const handleRandomMemorization = () => {
+    trackEvent('random_memorization_click');
     if (recipeById?.success && recipeById.data.menus.length > 0) {
       const shuffledMenus = [...recipeById.data.menus].sort(
         () => Math.random() - 0.5,
@@ -86,6 +88,7 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
   );
 
   const handleEditPress = (menu: Menu) => {
+    trackEvent('edit_menu_click');
     setEditingMenuId(menu.id);
     setEditingMenuName(menu.name);
     setEditingMenuIngredients(menu.ingredients);
@@ -93,6 +96,7 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
   };
 
   const handleUpdateMenu = async () => {
+    trackEvent('edit_menu_save');
     if (editingMenuId === null) {
       Alert.alert('오류', '수정할 메뉴를 선택해주세요.');
       return;
@@ -139,6 +143,7 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
   };
 
   const handleDeleteMenu = (menuId: number) => {
+    trackEvent('delete_menu_click');
     Alert.alert('메뉴 삭제', '이 메뉴를 삭제하시겠습니까?', [
       { text: '취소', style: 'cancel' },
       {
@@ -183,6 +188,7 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
   };
 
   const handleAddMenu = async () => {
+    trackEvent('add_menu_save');
     try {
       const result = await createMenuMutation.mutateAsync({
         recipeId,
@@ -308,7 +314,10 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
               <View style={styles.modalButtonContainer}>
                 <Button
                   title="취소"
-                  onPress={() => setIsEditingModalVisible(false)}
+                  onPress={() => {
+                    trackEvent('edit_menu_cancel');
+                    setIsEditingModalVisible(false);
+                  }}
                   disabled={updateMenuMutation.isPending}
                   color="gray"
                 />
@@ -348,7 +357,10 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
               <View style={styles.modalButtonContainer}>
                 <Button
                   title="취소"
-                  onPress={() => setIsAddModalVisible(false)}
+                  onPress={() => {
+                    trackEvent('add_menu_cancel');
+                    setIsAddModalVisible(false);
+                  }}
                   disabled={createMenuMutation.isPending}
                   color="gray"
                 />
@@ -364,7 +376,10 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
 
         <Pressable
           style={styles.fab}
-          onPress={() => setIsAddModalVisible(true)}
+          onPress={() => {
+            trackEvent('fab_add_menu_click');
+            setIsAddModalVisible(true);
+          }}
         >
           <Icon name="add" size={30} color="white" />
         </Pressable>
