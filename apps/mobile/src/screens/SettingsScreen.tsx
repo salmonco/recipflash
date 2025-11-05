@@ -1,12 +1,23 @@
 import auth from '@react-native-firebase/auth';
 import React from 'react';
-import { Alert, Button, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, typography } from '../styles/theme';
 import { trpc } from '../trpc';
 import { trackEvent } from '../utils/tracker';
 
 const SettingsScreen = () => {
   const deleteUserMutation = trpc.auth.deleteUser.useMutation();
+
+  const handleSignOut = async () => {
+    trackEvent('sign_out_click');
+    try {
+      await auth().signOut();
+      // The auth state listener in App.tsx will handle navigation to the LoginScreen
+    } catch (error: any) {
+      Alert.alert('로그아웃 오류', error.message);
+    }
+  };
 
   const handleDeleteAccount = async () => {
     trackEvent('account_deletion_click');
@@ -27,14 +38,11 @@ const SettingsScreen = () => {
                 return;
               }
 
-              // Call the tRPC mutation to delete user data from the backend
               const result = await deleteUserMutation.mutateAsync();
 
               if (result.success) {
-                // Delete user from Firebase Authentication
                 await currentUser.delete();
                 Alert.alert('성공', '계정이 성공적으로 탈퇴되었습니다.');
-                // Navigate to login screen or handle sign out
               } else {
                 Alert.alert(
                   '오류',
@@ -58,7 +66,15 @@ const SettingsScreen = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>계정 설정</Text>
-        <Button title="탈퇴하기" onPress={handleDeleteAccount} color="red" />
+        <Pressable style={styles.button} onPress={handleSignOut}>
+          <Text style={styles.buttonText}>로그아웃</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.button, styles.deleteButton]}
+          onPress={handleDeleteAccount}
+        >
+          <Text style={styles.deleteButtonText}>탈퇴하기</Text>
+        </Pressable>
       </View>
     </SafeAreaView>
   );
@@ -67,19 +83,35 @@ const SettingsScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.background,
   },
   section: {
-    backgroundColor: 'white',
     marginTop: 20,
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    paddingHorizontal: 15,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    ...typography.subtitle,
     marginBottom: 10,
+    paddingHorizontal: 10,
+  },
+  button: {
+    backgroundColor: colors.white,
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.gray,
+  },
+  buttonText: {
+    ...typography.body,
+  },
+  deleteButton: {
+    borderColor: colors.point,
+  },
+  deleteButtonText: {
+    ...typography.body,
+    color: colors.point,
   },
 });
 

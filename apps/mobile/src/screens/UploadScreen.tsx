@@ -5,16 +5,16 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Button,
+  Pressable,
   StatusBar,
   StyleSheet,
   Text,
-  useColorScheme,
   View,
 } from 'react-native';
 import DocumentPicker, { types } from 'react-native-document-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Recipe } from '../models/Recipe';
+import { colors, typography } from '../styles/theme';
 import { trpc } from '../trpc';
 import { trackEvent } from '../utils/tracker';
 
@@ -27,14 +27,13 @@ type RootStackParamList = {
 type UploadScreenProps = NativeStackScreenProps<RootStackParamList, 'Upload'>;
 
 const UploadScreen = ({ navigation }: UploadScreenProps) => {
-  const isDarkMode = useColorScheme() === 'dark';
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const createRecipeMutation = trpc.recipe.createRecipe.useMutation();
 
   const backgroundStyle = {
-    backgroundColor: isDarkMode ? '#333' : '#F3F3F3',
+    backgroundColor: colors.background,
     flex: 1,
   };
 
@@ -44,12 +43,10 @@ const UploadScreen = ({ navigation }: UploadScreenProps) => {
     setIsLoading(true);
 
     try {
-      // 1. Pick a single PDF file
       const file = await DocumentPicker.pickSingle({
         type: [types.pdf],
       });
 
-      // 2. Create FormData to send the file
       const formData = new FormData();
       formData.append('recipe', {
         uri: file.uri,
@@ -57,7 +54,6 @@ const UploadScreen = ({ navigation }: UploadScreenProps) => {
         name: file.name,
       });
 
-      // 3. Upload the file to the backend
       const user = auth().currentUser;
       let token = null;
       if (user) {
@@ -82,10 +78,9 @@ const UploadScreen = ({ navigation }: UploadScreenProps) => {
       navigation.navigate('MenuList', {
         recipeId: result.id,
         recipeTitle: result.title,
-      }); // Navigate back to RecipeList after successful upload
+      });
     } catch (err) {
       if (DocumentPicker.isCancel(err)) {
-        // User cancelled the picker
         console.log('사용자가 문서 선택을 취소했습니다.');
       } else {
         const message =
@@ -128,29 +123,33 @@ const UploadScreen = ({ navigation }: UploadScreenProps) => {
 
   return (
     <SafeAreaView style={backgroundStyle}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      <StatusBar barStyle="dark-content" />
       <View style={styles.container}>
-        <Text style={styles.title}>Recipflash</Text>
+        <Text style={styles.title}>🍳🥘🧑‍🍳🍳</Text>
         <Text style={styles.subtitle}>
           레시피 PDF를 업로드하여 메뉴를 자동으로 생성하세요.
         </Text>
 
         <View style={styles.buttonContainer}>
-          <Button
-            title="레시피 PDF 업로드"
+          <Pressable
+            style={styles.button}
             onPress={handleUpload}
             disabled={isLoading}
-          />
-          <Button
-            title="레시피 수동 생성"
+          >
+            <Text style={styles.buttonText}>레시피 PDF 업로드</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.button, styles.manualButton]}
             onPress={handleManualCreate}
             disabled={isLoading}
-          />
+          >
+            <Text style={styles.manualButtonText}>레시피 수동 생성</Text>
+          </Pressable>
         </View>
 
         {isLoading && (
           <View style={styles.statusContainer}>
-            <ActivityIndicator size="large" />
+            <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.statusText}>메뉴를 생성 중입니다...</Text>
           </View>
         )}
@@ -169,23 +168,48 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 24,
+    justifyContent: 'center',
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    ...typography.title,
+    fontSize: 36,
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
+    ...typography.body,
     textAlign: 'center',
-    color: '#666',
-    marginBottom: 24,
+    color: colors.gray,
+    marginBottom: 48,
   },
   buttonContainer: {
     marginBottom: 24,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+  },
+  button: {
+    backgroundColor: colors.primary,
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 30,
+    alignItems: 'center',
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  buttonText: {
+    ...typography.subtitle,
+    color: colors.text,
+  },
+  manualButton: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  manualButtonText: {
+    ...typography.subtitle,
+    color: colors.primary,
   },
   statusContainer: {
     alignItems: 'center',
@@ -193,14 +217,14 @@ const styles = StyleSheet.create({
     marginTop: 32,
   },
   statusText: {
+    ...typography.body,
     marginTop: 12,
-    fontSize: 16,
-    color: '#333',
+    color: colors.gray,
   },
   errorText: {
+    ...typography.body,
     marginTop: 12,
-    fontSize: 16,
-    color: 'red',
+    color: colors.point,
   },
 });
 

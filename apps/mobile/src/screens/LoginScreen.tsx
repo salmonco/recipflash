@@ -5,14 +5,15 @@ import {
 import React from 'react';
 import {
   Alert,
-  Button,
   Linking,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { authService } from '../services/authService';
+import { colors, typography } from '../styles/theme';
 import { trpc } from '../trpc';
 import { trackEvent } from '../utils/tracker';
 
@@ -76,10 +77,14 @@ const LoginScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Button title="Sign in with Google" onPress={handleGoogleSignIn} />
+      <Text style={styles.title}>RecipFlash</Text>
+      <Text style={styles.subtitle}>당신의 레시피를 플래시 카드로</Text>
+      <Pressable style={styles.googleButton} onPress={handleGoogleSignIn}>
+        <Text style={styles.buttonText}>Sign in with Google</Text>
+      </Pressable>
       {Platform.OS === 'ios' && appleAuth.isSupported && (
         <AppleButton
-          buttonStyle={AppleButton.Style.BLACK}
+          buttonStyle={AppleButton.Style.WHITE_OUTLINE}
           buttonType={AppleButton.Type.SIGN_IN}
           style={styles.appleButton}
           onPress={handleAppleSignIn}
@@ -97,15 +102,40 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: colors.background,
+  },
+  title: {
+    ...typography.title,
+    fontSize: 48,
+    marginBottom: 10,
+  },
+  subtitle: {
+    ...typography.body,
+    fontSize: 18,
+    color: colors.gray,
+    marginBottom: 60,
+  },
+  googleButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 25,
+    marginBottom: 15,
+    width: 250,
+    alignItems: 'center',
+  },
+  buttonText: {
+    ...typography.subtitle,
+    color: colors.text,
   },
   appleButton: {
-    width: 160,
+    width: 250,
     height: 45,
     marginTop: 10,
   },
   privacyPolicyText: {
     marginTop: 20,
-    color: 'blue',
+    color: colors.gray,
     textDecorationLine: 'underline',
   },
 });

@@ -1,3 +1,4 @@
+import * as amplitude from '@amplitude/analytics-react-native';
 import { API_URL } from '@env';
 import { getUpdateSource, HotUpdater } from '@hot-updater/react-native';
 import auth from '@react-native-firebase/auth';
@@ -19,10 +20,10 @@ import MenuListScreen from './src/screens/MenuListScreen';
 import RecipeListScreen from './src/screens/RecipeListScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import UploadScreen from './src/screens/UploadScreen';
+import { colors, typography } from './src/styles/theme';
 import { trpc } from './src/trpc';
 import { customLink } from './src/trpc/customLink';
 import { trackAppStart, trackScreenView } from './src/utils/tracker';
-import * as amplitude from '@amplitude/analytics-react-native';
 
 if (process.env.AMPLITUDE_API_KEY) {
   amplitude.init(process.env.AMPLITUDE_API_KEY, undefined, {
@@ -104,7 +105,6 @@ function App(): React.JSX.Element {
     const currentRouteName = getActiveRouteName(state);
 
     if (previousRouteName !== currentRouteName) {
-      // Google Analytics에 스크린 전송
       trackScreenView({ screenName: currentRouteName });
     }
 
@@ -119,7 +119,20 @@ function App(): React.JSX.Element {
             ref={navigationRef}
             onStateChange={onStateChange}
           >
-            <Stack.Navigator initialRouteName="RecipeList">
+            <Stack.Navigator
+              initialRouteName="RecipeList"
+              screenOptions={{
+                headerStyle: {
+                  backgroundColor: colors.background,
+                },
+                headerTintColor: colors.text,
+                headerTitleStyle: {
+                  fontSize: typography.subtitle.fontSize,
+                  fontWeight: typography.subtitle.fontWeight,
+                },
+                headerShadowVisible: false,
+              }}
+            >
               <Stack.Screen
                 name="RecipeList"
                 component={RecipeListScreen}
@@ -127,7 +140,7 @@ function App(): React.JSX.Element {
                   title: '모든 레시피',
                   headerRight: () => (
                     <Pressable onPress={() => navigation.navigate('Settings')}>
-                      <Icon name="settings" size={24} color="black" />
+                      <Icon name="settings" size={24} color={colors.text} />
                     </Pressable>
                   ),
                 })}
@@ -166,12 +179,10 @@ export default HotUpdater.wrap({
   source: getUpdateSource(
     'https://zwuwbwentecdfwamokev.supabase.co/functions/v1/update-server',
     {
-      updateStrategy: 'appVersion', // or "fingerprint"
+      updateStrategy: 'appVersion',
     },
   ),
-  requestHeaders: {
-    // if you want to use the request headers, you can add them here
-  },
+  requestHeaders: {},
   fallbackComponent: ({ progress, status }) => (
     <View
       style={{
@@ -180,16 +191,14 @@ export default HotUpdater.wrap({
         borderRadius: 10,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: colors.background,
       }}
     >
-      {/* You can put a splash image here. */}
-
-      <Text style={{ color: 'white', fontSize: 20, fontWeight: 'bold' }}>
+      <Text style={{ ...typography.title, color: colors.text }}>
         {status === 'UPDATING' ? 'Updating...' : 'Checking for Update...'}
       </Text>
       {progress > 0 ? (
-        <Text style={{ color: 'white', fontSize: 20, fontWeight: 'bold' }}>
+        <Text style={{ ...typography.subtitle, color: colors.text }}>
           {Math.round(progress * 100)}%
         </Text>
       ) : null}

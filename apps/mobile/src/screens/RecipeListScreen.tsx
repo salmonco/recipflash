@@ -4,7 +4,6 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Button,
   FlatList,
   Modal,
   Pressable,
@@ -12,12 +11,12 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  useColorScheme,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Recipe } from '../models/Recipe';
+import { colors, typography } from '../styles/theme';
 import { trpc } from '../trpc';
 import { trackEvent } from '../utils/tracker';
 
@@ -33,7 +32,6 @@ type RecipeListScreenProps = NativeStackScreenProps<
 >;
 
 const RecipeListScreen = ({ navigation }: RecipeListScreenProps) => {
-  const isDarkMode = useColorScheme() === 'dark';
   const {
     data: allRecipes,
     isLoading,
@@ -42,7 +40,6 @@ const RecipeListScreen = ({ navigation }: RecipeListScreenProps) => {
   } = trpc.recipe.getAllRecipes.useQuery();
   const utils = trpc.useUtils();
 
-  // State for editing recipe title
   const [
     isEditingRecipeTitleModalVisible,
     setIsEditingRecipeTitleModalVisible,
@@ -54,11 +51,10 @@ const RecipeListScreen = ({ navigation }: RecipeListScreenProps) => {
   const deleteRecipeMutation = trpc.recipe.deleteRecipe.useMutation();
 
   const backgroundStyle = {
-    backgroundColor: isDarkMode ? '#333' : '#F3F3F3',
+    backgroundColor: colors.background,
     flex: 1,
   };
 
-  // Refetch data when the screen comes into focus
   useFocusEffect(
     useCallback(() => {
       refetch();
@@ -86,8 +82,6 @@ const RecipeListScreen = ({ navigation }: RecipeListScreenProps) => {
 
       if (result.success) {
         Alert.alert('성공', '레시피 제목이 업데이트되었습니다!');
-
-        // Update the cache directly
         utils.recipe.getAllRecipes.setData(undefined, oldData => {
           if (!oldData?.success) return oldData;
           return {
@@ -102,7 +96,6 @@ const RecipeListScreen = ({ navigation }: RecipeListScreenProps) => {
             },
           };
         });
-        // No need to call refetch() here as cache is updated
         setIsEditingRecipeTitleModalVisible(false);
       } else {
         throw new Error(
@@ -130,7 +123,6 @@ const RecipeListScreen = ({ navigation }: RecipeListScreenProps) => {
             });
             if (result.success) {
               Alert.alert('성공', '레시피가 삭제되었습니다.');
-              // Update the cache directly
               utils.recipe.getAllRecipes.setData(undefined, oldData => {
                 if (!oldData?.success) return oldData;
                 return {
@@ -163,7 +155,7 @@ const RecipeListScreen = ({ navigation }: RecipeListScreenProps) => {
   if (isLoading) {
     return (
       <SafeAreaView style={[backgroundStyle, styles.centered]}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.statusText}>레시피를 불러오는 중입니다...</Text>
       </SafeAreaView>
     );
@@ -177,24 +169,16 @@ const RecipeListScreen = ({ navigation }: RecipeListScreenProps) => {
     );
   }
 
-  if (!allRecipes?.success) {
-    return (
-      <SafeAreaView style={[backgroundStyle, styles.centered]}>
-        <Text style={styles.errorText}>
-          레시피가 없습니다. 새 레시피를 등록해보세요!
-        </Text>
-      </SafeAreaView>
-    );
-  }
-
   const hasRecipes =
-    allRecipes.data.recipes && allRecipes.data.recipes.length > 0;
+    allRecipes?.success &&
+    allRecipes.data.recipes &&
+    allRecipes.data.recipes.length > 0;
 
   return (
     <SafeAreaView style={backgroundStyle}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      <StatusBar barStyle={'dark-content'} />
       <View style={styles.container}>
-        <Text style={styles.title}>레시피</Text>
+        {!hasRecipes && <Text style={styles.title}>레시피</Text>}
 
         {hasRecipes ? (
           <FlatList
@@ -222,13 +206,13 @@ const RecipeListScreen = ({ navigation }: RecipeListScreenProps) => {
                     onPress={() => handleEditRecipeTitlePress(item)}
                     style={styles.iconButton}
                   >
-                    <Icon name="edit" size={24} color="#007AFF" />
+                    <Icon name="edit" size={24} color={colors.primary} />
                   </Pressable>
                   <Pressable
                     onPress={() => handleDeleteRecipe(item.id)}
                     style={styles.iconButton}
                   >
-                    <Icon name="delete" size={24} color="red" />
+                    <Icon name="delete" size={24} color={colors.point} />
                   </Pressable>
                 </View>
               </View>
@@ -237,19 +221,20 @@ const RecipeListScreen = ({ navigation }: RecipeListScreenProps) => {
         ) : (
           <View style={styles.noRecipesContainer}>
             <Text style={styles.noRecipesText}>
-              메뉴가 없습니다. 새 메뉴를 등록해보세요!
+              레시피가 없습니다. 새 레시피를 등록해보세요!
             </Text>
-            <Button
-              title="새 레시피 업로드"
+            <Pressable
+              style={styles.uploadButton}
               onPress={() => {
                 trackEvent('no_recipe_upload_button_click');
                 navigation.navigate('Upload');
               }}
-            />
+            >
+              <Text style={styles.uploadButtonText}>새 레시피 업로드</Text>
+            </Pressable>
           </View>
         )}
 
-        {/* Floating Action Button */}
         <Pressable
           style={styles.fab}
           onPress={() => {
@@ -257,10 +242,9 @@ const RecipeListScreen = ({ navigation }: RecipeListScreenProps) => {
             navigation.navigate('Upload');
           }}
         >
-          <Text style={styles.fabText}>+</Text>
+          <Icon name="add" size={28} color={colors.white} />
         </Pressable>
 
-        {/* Edit Recipe Title Modal */}
         <Modal
           animationType="slide"
           transparent={true}
@@ -275,19 +259,23 @@ const RecipeListScreen = ({ navigation }: RecipeListScreenProps) => {
                 placeholder="레시피 제목"
                 value={editingRecipeTitle}
                 onChangeText={setEditingRecipeTitle}
+                placeholderTextColor={colors.gray}
               />
               <View style={styles.modalButtonContainer}>
-                <Button
-                  title="취소"
+                <Pressable
+                  style={[styles.modalButton, styles.cancelButton]}
                   onPress={() => setIsEditingRecipeTitleModalVisible(false)}
                   disabled={updateRecipeTitleMutation.isPending}
-                  color="gray"
-                />
-                <Button
-                  title="저장"
+                >
+                  <Text style={styles.modalButtonText}>취소</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.modalButton, styles.saveButton]}
                   onPress={handleUpdateRecipeTitle}
                   disabled={updateRecipeTitleMutation.isPending}
-                />
+                >
+                  <Text style={styles.modalButtonText}>저장</Text>
+                </Pressable>
               </View>
             </View>
           </View>
@@ -308,30 +296,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    ...typography.title,
     textAlign: 'center',
     marginBottom: 24,
   },
   statusText: {
+    ...typography.body,
     marginTop: 12,
-    fontSize: 16,
-    color: '#333',
+    color: colors.gray,
   },
   errorText: {
+    ...typography.body,
     marginTop: 12,
-    fontSize: 16,
-    color: 'red',
+    color: colors.point,
   },
   recipeItem: {
-    backgroundColor: 'white',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.22,
-    shadowRadius: 2.22,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     elevation: 3,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -342,17 +329,16 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   recipeTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    ...typography.subtitle,
   },
   recipeMenuCount: {
-    fontSize: 14,
-    color: '#666',
+    ...typography.body,
+    color: colors.gray,
     marginTop: 4,
   },
   recipeActions: {
     flexDirection: 'row',
-    gap: 5,
+    gap: 10,
   },
   iconButton: {
     padding: 5,
@@ -361,39 +347,48 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 50,
   },
   noRecipesText: {
-    fontSize: 16,
+    ...typography.body,
     textAlign: 'center',
     marginBottom: 20,
-    color: '#666',
+    color: colors.gray,
+  },
+  uploadButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 25,
+  },
+  uploadButtonText: {
+    ...typography.subtitle,
+    color: colors.text,
   },
   fab: {
     position: 'absolute',
-    width: 56,
-    height: 56,
+    width: 60,
+    height: 60,
     alignItems: 'center',
     justifyContent: 'center',
-    right: 20,
-    bottom: 20,
-    backgroundColor: '#03A9F4',
-    borderRadius: 28,
+    right: 24,
+    bottom: 24,
+    backgroundColor: colors.primary,
+    borderRadius: 30,
     elevation: 8,
-  },
-  fabText: {
-    fontSize: 24,
-    color: 'white',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   centeredView: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 22,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
   modalView: {
     margin: 20,
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 20,
     padding: 35,
     alignItems: 'center',
@@ -405,27 +400,44 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
+    width: '80%',
   },
   modalTitle: {
-    marginBottom: 15,
-    textAlign: 'center',
-    fontSize: 20,
-    fontWeight: 'bold',
+    ...typography.title,
+    marginBottom: 20,
   },
   input: {
-    height: 40,
-    borderColor: 'gray',
+    ...typography.body,
+    height: 50,
+    borderColor: colors.gray,
     borderWidth: 1,
-    marginBottom: 10,
-    paddingHorizontal: 10,
-    width: 250,
-    borderRadius: 5,
+    marginBottom: 20,
+    paddingHorizontal: 15,
+    width: '100%',
+    borderRadius: 10,
   },
   modalButtonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     width: '100%',
-    marginTop: 10,
+  },
+  modalButton: {
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    flex: 1,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: colors.gray,
+    marginRight: 10,
+  },
+  saveButton: {
+    backgroundColor: colors.primary,
+  },
+  modalButtonText: {
+    ...typography.subtitle,
+    color: colors.white,
   },
 });
 

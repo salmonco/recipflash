@@ -7,7 +7,6 @@ import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Button,
   FlatList,
   Modal,
   Pressable,
@@ -15,12 +14,12 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  useColorScheme,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Menu } from '../models/Menu';
+import { colors, typography } from '../styles/theme';
 import { trpc } from '../trpc';
 import { trackEvent } from '../utils/tracker';
 
@@ -37,7 +36,6 @@ type MenuListScreenProps = NativeStackScreenProps<
 
 const MenuListScreen = ({ route }: MenuListScreenProps) => {
   const { recipeId, recipeTitle } = route.params;
-  const isDarkMode = useColorScheme() === 'dark';
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const {
@@ -50,13 +48,11 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
   });
   const utils = trpc.useUtils();
 
-  // State for editing
   const [isEditingModalVisible, setIsEditingModalVisible] = useState(false);
   const [editingMenuId, setEditingMenuId] = useState<number | null>(null);
   const [editingMenuName, setEditingMenuName] = useState('');
   const [editingMenuIngredients, setEditingMenuIngredients] = useState('');
 
-  // State for adding a new menu
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [newMenuName, setNewMenuName] = useState('');
   const [newMenuIngredients, setNewMenuIngredients] = useState('');
@@ -66,7 +62,7 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
   const createMenuMutation = trpc.menu.createMenu.useMutation();
 
   const backgroundStyle = {
-    backgroundColor: isDarkMode ? '#333' : '#F3F3F3',
+    backgroundColor: colors.background,
     flex: 1,
   };
 
@@ -80,7 +76,6 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
     }
   };
 
-  // Refetch data when the screen comes into focus
   useFocusEffect(
     useCallback(() => {
       refetch();
@@ -111,7 +106,6 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
 
       if (result.success) {
         Alert.alert('성공', '메뉴가 성공적으로 수정되었습니다!');
-        // Update the cache directly
         utils.recipe.getRecipeById.setData({ id: recipeId }, oldData => {
           if (!oldData?.success) return oldData;
           return {
@@ -130,7 +124,6 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
             },
           };
         });
-        // No need to call refetch() here as cache is updated
         setIsEditingModalVisible(false);
       } else {
         throw new Error(result.errorMessage || '메뉴 수정에 실패했습니다.');
@@ -151,12 +144,9 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
         style: 'destructive',
         onPress: async () => {
           try {
-            const result = await deleteMenuMutation.mutateAsync({
-              id: menuId,
-            });
+            const result = await deleteMenuMutation.mutateAsync({ id: menuId });
             if (result.success) {
               Alert.alert('성공', '메뉴가 삭제되었습니다.');
-              // Update the cache directly
               utils.recipe.getRecipeById.setData({ id: recipeId }, oldData => {
                 if (!oldData?.success) return oldData;
                 return {
@@ -169,7 +159,6 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
                   },
                 };
               });
-              // No need to call refetch() here as cache is updated
             } else {
               throw new Error(
                 result.errorMessage || '메뉴 삭제에 실패했습니다.',
@@ -224,7 +213,7 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
   if (isLoading) {
     return (
       <SafeAreaView style={[backgroundStyle, styles.centered]}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.statusText}>메뉴를 불러오는 중입니다...</Text>
       </SafeAreaView>
     );
@@ -250,13 +239,18 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
 
   return (
     <SafeAreaView style={backgroundStyle}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      <StatusBar barStyle="dark-content" />
       <View style={styles.container}>
-        <Text style={styles.title}>{recipeTitle}</Text>
-        <View style={styles.buttonContainer}>
-          <Button onPress={handleRandomMemorization} title="랜덤 암기" />
+        <View style={styles.headerContainer}>
+          <Text style={styles.title}>{recipeTitle}</Text>
+          <Pressable
+            style={styles.randomButton}
+            onPress={handleRandomMemorization}
+          >
+            <Text style={styles.randomButtonText}>랜덤 암기</Text>
+          </Pressable>
         </View>
-        {recipeById?.success && recipeById.data.menus.length > 0 ? (
+        {recipeById.data.menus.length > 0 ? (
           <FlatList
             data={recipeById.data.menus}
             keyExtractor={item => item.id.toString()}
@@ -269,13 +263,13 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
                       onPress={() => handleEditPress(item)}
                       style={styles.iconButton}
                     >
-                      <Icon name="edit" size={24} color="#007AFF" />
+                      <Icon name="edit" size={24} color={colors.primary} />
                     </Pressable>
                     <Pressable
                       onPress={() => handleDeleteMenu(item.id)}
                       style={styles.iconButton}
                     >
-                      <Icon name="delete" size={24} color="red" />
+                      <Icon name="delete" size={24} color={colors.point} />
                     </Pressable>
                   </View>
                 </View>
@@ -284,9 +278,11 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
             )}
           />
         ) : (
-          <Text style={styles.noMenusText}>
-            이 레시피에 대한 메뉴가 없습니다.
-          </Text>
+          <View style={styles.noMenusContainer}>
+            <Text style={styles.noMenusText}>
+              이 레시피에 대한 메뉴가 없습니다.
+            </Text>
+          </View>
         )}
 
         <Modal
@@ -303,35 +299,39 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
                 placeholder="메뉴 이름"
                 value={editingMenuName}
                 onChangeText={setEditingMenuName}
+                placeholderTextColor={colors.gray}
               />
               <TextInput
-                style={styles.input}
+                style={[styles.input, styles.multilineInput]}
                 placeholder="재료"
                 value={editingMenuIngredients}
                 onChangeText={setEditingMenuIngredients}
                 multiline
+                placeholderTextColor={colors.gray}
               />
               <View style={styles.modalButtonContainer}>
-                <Button
-                  title="취소"
+                <Pressable
+                  style={[styles.modalButton, styles.cancelButton]}
                   onPress={() => {
                     trackEvent('edit_menu_cancel');
                     setIsEditingModalVisible(false);
                   }}
                   disabled={updateMenuMutation.isPending}
-                  color="gray"
-                />
-                <Button
-                  title="저장"
+                >
+                  <Text style={styles.modalButtonText}>취소</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.modalButton, styles.saveButton]}
                   onPress={handleUpdateMenu}
                   disabled={updateMenuMutation.isPending}
-                />
+                >
+                  <Text style={styles.modalButtonText}>저장</Text>
+                </Pressable>
               </View>
             </View>
           </View>
         </Modal>
 
-        {/* Add Menu Modal */}
         <Modal
           animationType="slide"
           transparent={true}
@@ -346,29 +346,34 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
                 placeholder="메뉴 이름"
                 value={newMenuName}
                 onChangeText={setNewMenuName}
+                placeholderTextColor={colors.gray}
               />
               <TextInput
-                style={styles.input}
+                style={[styles.input, styles.multilineInput]}
                 placeholder="재료"
                 value={newMenuIngredients}
                 onChangeText={setNewMenuIngredients}
                 multiline
+                placeholderTextColor={colors.gray}
               />
               <View style={styles.modalButtonContainer}>
-                <Button
-                  title="취소"
+                <Pressable
+                  style={[styles.modalButton, styles.cancelButton]}
                   onPress={() => {
                     trackEvent('add_menu_cancel');
                     setIsAddModalVisible(false);
                   }}
                   disabled={createMenuMutation.isPending}
-                  color="gray"
-                />
-                <Button
-                  title="추가"
+                >
+                  <Text style={styles.modalButtonText}>취소</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.modalButton, styles.saveButton]}
                   onPress={handleAddMenu}
                   disabled={createMenuMutation.isPending}
-                />
+                >
+                  <Text style={styles.modalButtonText}>추가</Text>
+                </Pressable>
               </View>
             </View>
           </View>
@@ -381,7 +386,7 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
             setIsAddModalVisible(true);
           }}
         >
-          <Icon name="add" size={30} color="white" />
+          <Icon name="add" size={28} color={colors.white} />
         </Pressable>
       </View>
     </SafeAreaView>
@@ -398,49 +403,59 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 16,
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
   },
-  buttonContainer: {
-    marginBottom: 16,
+  title: {
+    ...typography.title,
+  },
+  randomButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+  },
+  randomButtonText: {
+    ...typography.subtitle,
+    color: colors.text,
   },
   statusText: {
+    ...typography.body,
     marginTop: 12,
-    fontSize: 16,
-    color: '#333',
+    color: colors.gray,
   },
   errorText: {
+    ...typography.body,
     marginTop: 12,
-    fontSize: 16,
-    color: 'red',
+    color: colors.point,
   },
   card: {
-    backgroundColor: 'white',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.22,
-    shadowRadius: 2.22,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     elevation: 3,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   cardName: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...typography.subtitle,
+    flex: 1,
   },
   cardIngredients: {
-    fontSize: 14,
-    color: '#555',
+    ...typography.body,
+    color: colors.gray,
   },
   menuActions: {
     flexDirection: 'row',
@@ -449,21 +464,25 @@ const styles = StyleSheet.create({
   iconButton: {
     padding: 5,
   },
+  noMenusContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   noMenusText: {
-    fontSize: 16,
+    ...typography.body,
+    color: colors.gray,
     textAlign: 'center',
-    marginTop: 50,
-    color: '#666',
   },
   centeredView: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 22,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
   modalView: {
     margin: 20,
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 20,
     padding: 35,
     alignItems: 'center',
@@ -475,39 +494,64 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
+    width: '80%',
   },
   modalTitle: {
-    marginBottom: 15,
-    textAlign: 'center',
-    fontSize: 20,
-    fontWeight: 'bold',
+    ...typography.title,
+    marginBottom: 20,
   },
   input: {
-    height: 40,
-    borderColor: 'gray',
+    ...typography.body,
+    height: 50,
+    borderColor: colors.gray,
     borderWidth: 1,
-    marginBottom: 10,
-    paddingHorizontal: 10,
-    width: 250,
-    borderRadius: 5,
+    marginBottom: 15,
+    paddingHorizontal: 15,
+    width: '100%',
+    borderRadius: 10,
+  },
+  multilineInput: {
+    height: 100,
+    textAlignVertical: 'top',
   },
   modalButtonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     width: '100%',
-    marginTop: 10,
+  },
+  modalButton: {
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    flex: 1,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: colors.gray,
+    marginRight: 10,
+  },
+  saveButton: {
+    backgroundColor: colors.primary,
+  },
+  modalButtonText: {
+    ...typography.subtitle,
+    color: colors.white,
   },
   fab: {
     position: 'absolute',
-    right: 30,
-    bottom: 30,
-    backgroundColor: '#007AFF',
     width: 60,
     height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+    right: 24,
+    bottom: 24,
+    backgroundColor: colors.primary,
+    borderRadius: 30,
     elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
 });
 

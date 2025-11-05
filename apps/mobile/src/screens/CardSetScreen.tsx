@@ -7,11 +7,11 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  useColorScheme,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Menu } from '../models/Menu';
+import { colors, typography } from '../styles/theme';
 import { trackEvent } from '../utils/tracker';
 
 type RootStackParamList = {
@@ -25,7 +25,6 @@ const { width } = Dimensions.get('window');
 
 const CardSetScreen = ({ route }: CardSetScreenProps) => {
   const { menus } = route.params;
-  const isDarkMode = useColorScheme() === 'dark';
   const [flipped, setFlipped] = useState(menus.map(() => false));
   const [flipAnimations] = useState(menus.map(() => new Animated.Value(0)));
   const [instructionAnimation] = useState(new Animated.Value(1));
@@ -74,7 +73,7 @@ const CardSetScreen = ({ route }: CardSetScreenProps) => {
   }, [instructionAnimation]);
 
   const backgroundStyle = {
-    backgroundColor: isDarkMode ? '#333' : '#F3F3F3',
+    backgroundColor: colors.background,
     flex: 1,
   };
 
@@ -113,6 +112,7 @@ const CardSetScreen = ({ route }: CardSetScreenProps) => {
     return (
       <View style={styles.cardContainer}>
         <TouchableOpacity
+          activeOpacity={1}
           onPress={() => {
             trackEvent('card_flip', { menuId: item.id, menuName: item.name });
             flipCard(index);
@@ -122,24 +122,14 @@ const CardSetScreen = ({ route }: CardSetScreenProps) => {
             style={[styles.card, styles.cardFront, frontAnimatedStyle]}
           >
             <View style={styles.cardTextContainer}>
-              {item.name.split(' ').map((word, i) => (
-                <Text key={`${word}-${i}`} style={styles.cardText}>
-                  {word}
-                  {i === item.name.split(' ').length - 1 ? '' : ' '}
-                </Text>
-              ))}
+              <Text style={styles.cardText}>{item.name}</Text>
             </View>
           </Animated.View>
           <Animated.View
             style={[styles.card, styles.cardBack, backAnimatedStyle]}
           >
             <View style={styles.cardTextContainer}>
-              {item.ingredients.split(' ').map((word, i) => (
-                <Text key={`${word}-${i}`} style={styles.cardText}>
-                  {word}
-                  {i === item.ingredients.split(' ').length - 1 ? '' : ' '}
-                </Text>
-              ))}
+              <Text style={styles.cardText}>{item.ingredients}</Text>
             </View>
           </Animated.View>
         </TouchableOpacity>
@@ -178,51 +168,53 @@ const styles = StyleSheet.create({
     width: width,
     justifyContent: 'center',
     alignItems: 'center',
+    flex: 1,
   },
   card: {
-    width: width * 0.8,
-    height: 300,
+    width: width * 0.85,
+    height: 400,
     justifyContent: 'center',
     alignItems: 'center',
     backfaceVisibility: 'hidden',
-    borderRadius: 10,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+    elevation: 5,
   },
   cardFront: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
   },
   cardBack: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.primary,
     position: 'absolute',
     top: 0,
   },
   cardText: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    ...typography.title,
     textAlign: 'center',
   },
   cardTextContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    alignItems: 'center',
     padding: 20,
   },
   instructionText: {
+    ...typography.body,
+    color: colors.gray,
     marginTop: 20,
-    fontSize: 16,
-    color: '#666',
+    position: 'absolute',
+    bottom: 100,
   },
   counterContainer: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 40,
     left: 0,
     right: 0,
     alignItems: 'center',
   },
   counterText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#666',
+    ...typography.subtitle,
+    color: colors.gray,
   },
 });
 
