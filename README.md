@@ -33,8 +33,8 @@
 | **AI 서버**             | Python                                         | AI/ML 라이브러리 및 생태계의 풍부함                            |
 |                         | LangChain                                      | LLM 애플리케이션 개발을 위한 프레임워크                        |
 |                         | Ollama                                         | 로컬 LLM 모델 실행 및 관리                                     |
-| **개발 환경**             | TurboRepo                                      | 모노레포 구성                                           |
-|                         | pnpm                                         | 패키지 매니저                                                    |
+| **개발 환경**           | TurboRepo                                      | 모노레포 구성                                                  |
+|                         | pnpm                                           | 패키지 매니저                                                  |
 
 ## 시작하기
 
@@ -111,11 +111,13 @@ WEB_CLIENT_ID=~~~.apps.googleusercontent.com
     ```bash
     ollama run llama3
     ```
-    
+
     그 다음 `apps/ai` 디렉토리에서 다음 명령어를 실행합니다.
 
     ```bash
     cd apps/ai
+    source venv/bin/activate
+    pip install -r requirements.txt
     pnpm dev
     ```
 
@@ -137,7 +139,7 @@ WEB_CLIENT_ID=~~~.apps.googleusercontent.com
     cd ios
     pod install
     cd ../
-    
+
     npx react-native run-ios # iOS 시뮬레이터 실행
     # 또는
     npx react-native run-android # Android 에뮬레이터 실행
