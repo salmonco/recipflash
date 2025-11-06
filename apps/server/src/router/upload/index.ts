@@ -51,7 +51,7 @@ router.post(
       );
 
       const pythonAiResponse = await fetch(
-        "http://localhost:8000/generate/menus",
+        `${process.env.API_URL}/generate/menus`,
         {
           method: "POST",
           body: formData,
