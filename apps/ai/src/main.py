@@ -8,6 +8,9 @@ import json
 import re
 from typing import List
 from langchain_core.runnables import RunnableLambda, Runnable
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # --- FastAPI App Initialization ---
 app = FastAPI(
