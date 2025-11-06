@@ -77,7 +77,7 @@ const LoginScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>RecipFlash</Text>
+      <Text style={styles.title}>🍳🌱🧑‍🍳🍎</Text>
       <Text style={styles.subtitle}>당신의 레시피를 플래시 카드로</Text>
       <Pressable style={styles.googleButton} onPress={handleGoogleSignIn}>
         <Text style={styles.buttonText}>Sign in with Google</Text>

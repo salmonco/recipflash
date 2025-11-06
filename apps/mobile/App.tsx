@@ -12,6 +12,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { httpBatchLink } from '@trpc/client';
 import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import BootSplash from 'react-native-bootsplash';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Menu } from './src/models/Menu';
 import CardSetScreen from './src/screens/CardSetScreen';
@@ -64,6 +65,8 @@ const trpcClient = trpc.createClient({
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
+const SPLASH_SCREEN_DELAY = 2000;
+
 function App(): React.JSX.Element {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const routeNameRef = useRef<string | undefined>(undefined);
@@ -86,6 +89,12 @@ function App(): React.JSX.Element {
     if (state) {
       routeNameRef.current = getActiveRouteName(state);
     }
+  }, []);
+
+  useEffect(() => {
+    setTimeout(() => {
+      BootSplash.hide();
+    }, SPLASH_SCREEN_DELAY);
   }, []);
 
   const getActiveRouteName = (state: NavigationState) => {
@@ -174,7 +183,7 @@ function App(): React.JSX.Element {
     </trpc.Provider>
   );
 }
-
+console.log('API_URL:', API_URL);
 export default HotUpdater.wrap({
   source: getUpdateSource(
     'https://zwuwbwentecdfwamokev.supabase.co/functions/v1/update-server',

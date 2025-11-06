@@ -178,7 +178,7 @@ const RecipeListScreen = ({ navigation }: RecipeListScreenProps) => {
     <SafeAreaView style={backgroundStyle}>
       <StatusBar barStyle={'dark-content'} />
       <View style={styles.container}>
-        {!hasRecipes && <Text style={styles.title}>레시피</Text>}
+        {!hasRecipes && <Text style={styles.title}>🍳🙋‍♂️</Text>}
 
         {hasRecipes ? (
           <FlatList

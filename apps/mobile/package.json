@@ -27,6 +27,7 @@
     "@trpc/react-query": "^11.6.0",
     "react": "19.1.1",
     "react-native": "0.82.0",
+    "react-native-bootsplash": "^6.3.11",
     "react-native-device-info": "^14.1.1",
     "react-native-document-picker": "^9.3.1",
     "react-native-safe-area-context": "^5.5.2",
