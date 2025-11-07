@@ -4,7 +4,7 @@ module.exports = {
     [
       'module:react-native-dotenv',
       {
-        env: ['WEB_CLIENT_ID'],
+        env: ['API_URL', 'WEB_CLIENT_ID', 'AMPLITUDE_API_KEY'],
         moduleName: '@env',
         path: '.env',
         safe: false,
