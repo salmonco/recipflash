@@ -82,6 +82,19 @@ class AuthService {
       throw error;
     }
   }
+
+  async emailAndPasswordSignIn(email: string, password: string) {
+    try {
+      const userCredential = await auth().signInWithEmailAndPassword(
+        email,
+        password,
+      );
+      return userCredential.user;
+    } catch (error: any) {
+      console.error('Email/Password Sign-In Error:', error);
+      throw error;
+    }
+  }
 }
 
 const authService = new AuthService();
