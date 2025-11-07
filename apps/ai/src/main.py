@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from pydantic import BaseModel, Field
 import PyPDF2
@@ -15,11 +16,15 @@ load_dotenv()
 # --- FastAPI App Initialization ---
 app = FastAPI(
     title="Recipflash AI Server",
-    description="AI server for recipe-related tasks using LangChain and Ollama, including PDF processing.",
+    description="AI server for recipe-related tasks using LangChain, including PDF processing.",
 )
 
-# --- Ollama and LangChain Setup ---
-llm = ChatOllama(model="llama3")
+# --- LLM Setup ---
+# Comment out the Ollama model to switch to OpenAI
+# llm = ChatOllama(model="llama3")
+
+# Uncomment the following line to use OpenAI
+llm = ChatOpenAI(model="gpt-3.5-turbo")
 
 # --- API Models ---
 class Menu(BaseModel):

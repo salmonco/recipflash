@@ -7,3 +7,4 @@ python-dotenv
 PyPDF2
 python-multipart
 langchain-ollama
+langchain-openai
