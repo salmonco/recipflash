@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest",
-    "deploy": "hot-updater deploy -i"
+    "deploy:bundle": "npx hot-updater deploy -i"
   },
   "dependencies": {
     "@amplitude/analytics-react-native": "^1.5.16",
