@@ -3,7 +3,8 @@ from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
 from pydantic import BaseModel, Field
-import pdfplumber
+import pytesseract
+from pdf2image import convert_from_bytes
 import io
 import json
 import re
@@ -168,13 +169,15 @@ async def translate_menus_to_korean(menus: List[Menu]) -> List[Menu]:
 # --- Helper function to extract text from PDF ---
 def extract_text_from_pdf(file_content: bytes) -> List[str]:
     try:
+        images = convert_from_bytes(file_content)
         text_list = []
-        with pdfplumber.open(io.BytesIO(file_content)) as pdf:
-            for page in pdf.pages:
-                text_list.append(page.extract_text() or "")
+        for image in images:
+            # Use Tesseract to do OCR on the image.
+            text = pytesseract.image_to_string(image, lang='kor+eng')
+            text_list.append(text)
         return text_list
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to extract text from PDF: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to extract text from PDF using OCR: {e}")
 
 # --- Helper function to generate menus from text ---
 async def generate_menus_from_text(recipe_text: str) -> MenuResponse:
@@ -236,9 +239,8 @@ def read_root():
 @app.post("/generate/menus", response_model=MenuResponse)
 async def generate_menus(file: UploadFile = File(...)):
     """Generate menus from an uploaded PDF recipe."""
-    if not file.content_type == "application/pdf":
+    if "pdf" not in file.content_type:
         raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
-
     try:
         file_content = await file.read()
         text_list = extract_text_from_pdf(file_content)
