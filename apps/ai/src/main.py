@@ -5,6 +5,7 @@ from langchain_core.prompts import PromptTemplate
 from pydantic import BaseModel, Field
 import pytesseract
 from pdf2image import convert_from_bytes
+from PIL import Image
 import io
 import json
 import re
@@ -17,7 +18,7 @@ load_dotenv()
 # --- FastAPI App Initialization ---
 app = FastAPI(
     title="Recipflash AI Server",
-    description="AI server for recipe-related tasks using LangChain, including PDF processing.",
+    description="AI server for recipe-related tasks using LangChain, including PDF and image processing.",
 )
 
 # --- LLM Setup ---
@@ -177,6 +178,16 @@ def extract_text_from_pdf(file_content: bytes) -> List[str]:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to extract text from PDF using OCR: {e}")
 
+# --- Helper function to extract text from an image ---
+def extract_text_from_image(file_content: bytes) -> List[str]:
+    try:
+        image = Image.open(io.BytesIO(file_content))
+        # Use Tesseract to do OCR on the image.
+        text = pytesseract.image_to_string(image, lang='kor+eng')
+        return [text]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to extract text from image using OCR: {e}")
+
 # --- Helper function to generate menus from text ---
 async def generate_menus_from_text(recipe_text: str) -> MenuResponse:
     if not recipe_text.strip():
@@ -235,22 +246,32 @@ def read_root():
     return {"status": "AI server is running"}
 
 @app.post("/generate/menus", response_model=MenuResponse)
-async def generate_menus(file: UploadFile = File(...)):
-    """Generate menus from an uploaded PDF recipe."""
-    if "pdf" not in file.content_type:
-        raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
+async def upload_recipe(file: UploadFile = File(...)):
+    """Generate menus from an uploaded PDF or image file."""
+    content_type = file.content_type
+    print(f"Received file with content type: {content_type}")
+
     try:
         file_content = await file.read()
-        text_list = extract_text_from_pdf(file_content)
+        text_list = []
 
-        print(f"page count: {len(text_list)}")  # Debugging output
+        if content_type == "application/pdf":
+            text_list = extract_text_from_pdf(file_content)
+        elif content_type and content_type.startswith("image/"):
+            text_list = extract_text_from_image(file_content)
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file type. Please upload a PDF or an image.")
+
+        print(f"Extracted page/image count: {len(text_list)}")  # Debugging output
 
         return await generate_menus_from_text_util(text_list)
 
     except HTTPException as e:
         raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to process PDF and generate menus: {e}")
+        # Log the full error for debugging
+        print(f"An unexpected error occurred: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to process file and generate menus: {e}")
 
 # To run this server:
 # 1. Make sure Ollama is running (e.g., 'ollama serve')

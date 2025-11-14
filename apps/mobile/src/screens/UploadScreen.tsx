@@ -44,7 +44,7 @@ const UploadScreen = ({ navigation }: UploadScreenProps) => {
 
     try {
       const file = await DocumentPicker.pickSingle({
-        type: [types.pdf],
+        type: [types.pdf, types.images],
       });
 
       const formData = new FormData();
@@ -127,7 +127,7 @@ const UploadScreen = ({ navigation }: UploadScreenProps) => {
       <View style={styles.container}>
         <Text style={styles.title}>🍳🥘🧑‍🍳🍳</Text>
         <Text style={styles.subtitle}>
-          레시피 PDF를 업로드하여 메뉴를 자동으로 생성하세요.
+          레시피 파일(PDF, 이미지)을 업로드하여 메뉴를 자동으로 생성하세요.
         </Text>
 
         <View style={styles.buttonContainer}>
@@ -136,7 +136,7 @@ const UploadScreen = ({ navigation }: UploadScreenProps) => {
             onPress={handleUpload}
             disabled={isLoading}
           >
-            <Text style={styles.buttonText}>레시피 PDF 업로드</Text>
+            <Text style={styles.buttonText}>레시피 파일 업로드</Text>
           </Pressable>
           <Pressable
             style={[styles.button, styles.manualButton]}

@@ -17,8 +17,13 @@ router.post(
       return res.status(400).send({ error: "No file uploaded." });
     }
 
-    if (req.file.mimetype !== "application/pdf") {
-      return res.status(400).send({ error: "Only PDF files are allowed." });
+    if (
+      req.file.mimetype !== "application/pdf" &&
+      !req.file.mimetype.startsWith("image/")
+    ) {
+      return res
+        .status(400)
+        .send({ error: "Only PDF and image files are allowed." });
     }
 
     const userId = req.userId;
