@@ -65,7 +65,7 @@ const trpcClient = trpc.createClient({
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
-const SPLASH_SCREEN_DELAY = 2000;
+const SPLASH_SCREEN_DELAY = 3000;
 
 function App(): React.JSX.Element {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
