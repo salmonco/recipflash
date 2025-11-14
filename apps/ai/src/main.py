@@ -15,6 +15,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# tesseract 경로 지정 for ec2
+pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"  # which tesseract 출력값
+
 # --- FastAPI App Initialization ---
 app = FastAPI(
     title="Recipflash AI Server",
@@ -168,7 +171,8 @@ async def translate_menus_to_korean(menus: List[Menu]) -> List[Menu]:
 # --- Helper function to extract text from PDF ---
 def extract_text_from_pdf(file_content: bytes) -> List[str]:
     try:
-        images = convert_from_bytes(file_content)
+        # pdftoppm 경로 지정 for ec2
+        images = convert_from_bytes(file_content, poppler_path="/usr/bin") # pdftoppm 위치
         text_list = []
         for image in images:
             # Use Tesseract to do OCR on the image.
