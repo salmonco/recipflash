@@ -80,8 +80,7 @@ def parse_llm_response_to_menus(llm_output: str) -> List[Menu]:
 
                             if "name" in processed_item and "ingredients" in processed_item:
                                 menus_list.append(Menu(name=processed_item["name"], ingredients=processed_item["ingredients"]))
-                    if menus_list: # If we found valid menus, return them
-                        return menus_list
+                    return menus_list # Return the list, even if it's empty
             except json.JSONDecodeError:
                 # Continue to next pattern if parsing fails
                 pass
@@ -126,8 +125,7 @@ def parse_llm_response_to_menus(llm_output: str) -> List[Menu]:
 
                     if "name" in processed_item and "ingredients" in processed_item:
                         menus_list.append(Menu(name=processed_item["name"], ingredients=processed_item["ingredients"]))
-            if menus_list:
-                return menus_list
+            return menus_list # Return the list, even if it's empty
     except json.JSONDecodeError:
         pass
 
