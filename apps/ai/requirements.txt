@@ -4,7 +4,7 @@ langchain
 langchain-community
 ollama
 python-dotenv
-PyPDF2
+pdfplumber
 python-multipart
 langchain-ollama
 langchain-openai

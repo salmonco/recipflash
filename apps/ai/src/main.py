@@ -3,7 +3,7 @@ from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
 from pydantic import BaseModel, Field
-import PyPDF2
+import pdfplumber
 import io
 import json
 import re
@@ -168,10 +168,10 @@ async def translate_menus_to_korean(menus: List[Menu]) -> List[Menu]:
 # --- Helper function to extract text from PDF ---
 def extract_text_from_pdf(file_content: bytes) -> List[str]:
     try:
-        reader = PyPDF2.PdfReader(io.BytesIO(file_content))
         text_list = []
-        for page_num in range(len(reader.pages)):
-            text_list.append(reader.pages[page_num].extract_text() or "")
+        with pdfplumber.open(io.BytesIO(file_content)) as pdf:
+            for page in pdf.pages:
+                text_list.append(page.extract_text() or "")
         return text_list
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to extract text from PDF: {e}")
@@ -179,20 +179,18 @@ def extract_text_from_pdf(file_content: bytes) -> List[str]:
 # --- Helper function to generate menus from text ---
 async def generate_menus_from_text(recipe_text: str) -> MenuResponse:
     if not recipe_text.strip():
-        raise HTTPException(status_code=400, detail="No text provided for menu generation.")
+        return MenuResponse(menus=[]) # Return empty if no text is provided
 
     menu_prompt = PromptTemplate(
         template="""다음 레시피 텍스트에서 메뉴 JSON 배열을 생성하세요. 모든 내용은 한국어여야 합니다.
 각 메뉴는 'name'과 'ingredients' 키를 가진 JSON 객체여야 합니다.
 예시:
 [
-  {{"name": "헛개리카노", "ingredients": "샷, 헛개시럽 2P"}},
+  {{"name": "아샷추", "ingredients": "아이스티 300ml, 샷"}},
+  {{"name": "카라멜 마끼아또", "ingredients": "카라멜소스 30g, 설탕시럽 2P, 스팀우유 250ml"}},
   {{"name": "헤이즐넛아메리카노", "ingredients": "샷, 헤이즐넛시럽 2P"}},
   {{"name": "레몬에이드", "ingredients": "사이다 가득(250ml), 레몬퓨레 1.5P + 슈가시럽 1P + 레몬슬라이스 + 애플민트"}},
-  {{"name": "자몽에이드", "ingredients": "사이다 가득(250ml), 자몽퓨레 1P + 자몽시럽 1P + 슈가시럽 1P + 자몽슬라이스 + 애플민트"}},
   {{"name": "플레인요거트스무디", "ingredients": "우유 200ml, 요거트파우더 6래들 + 슈가시럽 1P"}},
-  {{"name": "딸기요거트스무디", "ingredients": "우유 150ml, 요거트파우더 3래들 + 가당딸기 150ml + 슈가시럽 1P"}},
-  {{"name": "코코넛커피스무디", "ingredients": "블랜더(재료,얼음) → 믹싱 → 계량컵(식힌 샷) → 컵(부어줌) → 토핑 3번 20x가득 x 코코넛베이스 250ml + 코코넛칩 1래들  // 컵 바닥 식힌 샷 50ml 코코넛칩 1래들(약 5g)"}},
 ]
 레시피 텍스트:
 ---
