@@ -17,26 +17,26 @@
 
 ## 기술 스택
 
-| 카테고리                | 기술 스택                                      | 선택 이유                                                      |
-| ----------------------- | ---------------------------------------------- | -------------------------------------------------------------- |
-| **프론트엔드 (모바일)** | React Native (CLI)                             | 크로스 플랫폼 개발 및 빠른 개발 속도                           |
-|                         | React Query (tRPC 연동)                        | 효율적인 데이터 fetching, 캐싱, 동기화 및 tRPC와의 강력한 통합 |
-|                         | React Navigation                               | 유연하고 확장 가능한 내비게이션 솔루션                         |
-|                         | Firebase Authentication                        | 간편하고 안전한 사용자 인증 (Google, Apple 로그인 포함)        |
-|                         | Amplitude | 주요 지표 측정, 사용자 행동 분석을 위한 이벤트 기반 로그 태깅                                         |
-|                         | hot-updater | OTA 업데이트 - 앱스토어를 거치지 않고 JS 번들을 교체해 즉시 반영 (네이티브 단의 변경은 앱스토어에 심사요청 필요)                                         |
-| **백엔드 서버 (Node)**       | Node.js                                        | 비동기 처리 및 확장성, JavaScript 생태계 활용                  |
-|                         | Express.js                                     | 빠르고 최소화된 웹 애플리케이션 프레임워크                     |
-|                         | tRPC                                           | 타입 안전성을 보장하는 엔드투엔드 API 개발                     |
-|                         | PostgreSQL (Supabase)                          | 안정적이고 강력한 관계형 데이터베이스                          |
-|                         | Prisma                                         | 현대적인 ORM으로 데이터베이스 접근 및 마이그레이션 관리        |
-|                         | Firebase Admin SDK                             | Firebase 서비스와의 안전한 서버 측 상호작용 및 인증 관리       |
-| **AI 서버 (Python)**             | Python                                         | AI/ML 라이브러리 및 생태계의 풍부함                            |
-|                         | LangChain                                      | LLM 애플리케이션 개발을 위한 프레임워크                        |
-|                         | Ollama                                         | 로컬 LLM 모델 실행 및 관리                                     |
-|                         | OpenAI API                                         | 외부 서버에서 실행 중인 LLM 모델을 API 요청해서 사용 (로컬 LLM 배포 비용 부담으로 인한 대안)        |
-| **개발 환경**           | TurboRepo                                      | 모노레포 구성                                                  |
-|                         | pnpm                                           | 패키지 매니저                                                  |
+| 카테고리                | 기술 스택               | 선택 이유                                                                                                        |
+| ----------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **프론트엔드 (모바일)** | React Native (CLI)      | 크로스 플랫폼 개발 및 빠른 개발 속도                                                                             |
+|                         | React Query (tRPC 연동) | 효율적인 데이터 fetching, 캐싱, 동기화 및 tRPC와의 강력한 통합                                                   |
+|                         | React Navigation        | 유연하고 확장 가능한 내비게이션 솔루션                                                                           |
+|                         | Firebase Authentication | 간편하고 안전한 사용자 인증 (Google, Apple 로그인 포함)                                                          |
+|                         | Amplitude               | 주요 지표 측정, 사용자 행동 분석을 위한 이벤트 기반 로그 태깅                                                    |
+|                         | hot-updater             | OTA 업데이트 - 앱스토어를 거치지 않고 JS 번들을 교체해 즉시 반영 (네이티브 단의 변경은 앱스토어에 심사요청 필요) |
+| **백엔드 서버 (Node)**  | Node.js                 | 비동기 처리 및 확장성, JavaScript 생태계 활용                                                                    |
+|                         | Express.js              | 빠르고 최소화된 웹 애플리케이션 프레임워크                                                                       |
+|                         | tRPC                    | 타입 안전성을 보장하는 엔드투엔드 API 개발                                                                       |
+|                         | PostgreSQL (Supabase)   | 안정적이고 강력한 관계형 데이터베이스                                                                            |
+|                         | Prisma                  | 현대적인 ORM으로 데이터베이스 접근 및 마이그레이션 관리                                                          |
+|                         | Firebase Admin SDK      | Firebase 서비스와의 안전한 서버 측 상호작용 및 인증 관리                                                         |
+| **AI 서버 (Python)**    | Python                  | AI/ML 라이브러리 및 생태계의 풍부함                                                                              |
+|                         | LangChain               | LLM 애플리케이션 개발을 위한 프레임워크                                                                          |
+|                         | Ollama                  | 로컬 LLM 모델 실행 및 관리                                                                                       |
+|                         | OpenAI API              | 외부 서버에서 실행 중인 LLM 모델을 API 요청해서 사용 (로컬 LLM 배포 비용 부담으로 인한 대안)                     |
+| **개발 환경**           | TurboRepo               | 모노레포 구성                                                                                                    |
+|                         | pnpm                    | 패키지 매니저                                                                                                    |
 
 <br/>
 <br/>
@@ -116,20 +116,26 @@ AMPLITUDE_API_KEY={채워넣기}
 
 1.  **Supabase 프로젝트 생성 (PostgreSQL):**
 
-2.  **Prisma 마이그레이션 적용:**
-    `apps/server` 디렉토리로 이동하여 마이그레이션을 적용합니다.
+2.  **Prisma 적용:**
+    `apps/server` 디렉토리로 이동하여 prisma를 생성합니다.
     ```bash
     cd apps/server
-    npx prisma migrate dev
+    npx prisma generate
     ```
 
 ## 애플리케이션 실행
 
 1.  **AI (Python) 서버 실행:**
-    우선 Ollama를 설치하고, 모델을 설치하여 실행합니다.
+    우선 Ollama를 설치하고, 모델을 설치하여 실행합니다. (로컬 LLM 서버 사용을 원할 시)
 
     ```bash
     ollama run llama3
+    ```
+
+    OCR 기능을 사용하기 위해 본인의 컴퓨터에 다음 라이브러리를 설치합니다.
+
+    ```bash
+    brew install tesseract
     ```
 
     그 다음 `apps/ai` 디렉토리에서 다음 명령어를 실행합니다.
