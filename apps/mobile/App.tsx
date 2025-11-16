@@ -183,7 +183,7 @@ function App(): React.JSX.Element {
     </trpc.Provider>
   );
 }
-console.log('API_URL:', API_URL);
+
 export default HotUpdater.wrap({
   source: getUpdateSource(
     'https://zwuwbwentecdfwamokev.supabase.co/functions/v1/update-server',
@@ -204,7 +204,7 @@ export default HotUpdater.wrap({
       }}
     >
       <Text style={{ ...typography.title, color: colors.text }}>
-        {status === 'UPDATING' ? 'Updating...' : 'Checking for Update...'}
+        {status === 'UPDATING' ? 'Updating...' : 'Checking for Update....'}
       </Text>
       {progress > 0 ? (
         <Text style={{ ...typography.subtitle, color: colors.text }}>
