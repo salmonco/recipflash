@@ -9,3 +9,4 @@ langchain-ollama
 langchain-openai
 pytesseract
 pdf2image
+pillow-heif
