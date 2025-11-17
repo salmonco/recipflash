@@ -12,11 +12,14 @@ import re
 from typing import List
 from langchain_core.runnables import RunnableLambda, Runnable
 from dotenv import load_dotenv
+import pillow_heif
 
 load_dotenv()
 
+pillow_heif.register_heif_opener() # image/heic 파일도 읽을 수 있도록 등록
+
 # tesseract 경로 지정 for ec2
-# pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"  # which tesseract 출력값
+pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"  # which tesseract 출력값
 
 # --- FastAPI App Initialization ---
 app = FastAPI(
@@ -172,8 +175,8 @@ async def translate_menus_to_korean(menus: List[Menu]) -> List[Menu]:
 def extract_text_from_pdf(file_content: bytes) -> List[str]:
     try:
         # pdftoppm 경로 지정 for ec2
-        # images = convert_from_bytes(file_content, poppler_path="/usr/bin") # pdftoppm 위치
-        images = convert_from_bytes(file_content)
+        images = convert_from_bytes(file_content, poppler_path="/usr/bin") # pdftoppm 위치
+        # images = convert_from_bytes(file_content)
         text_list = []
         for image in images:
             # Use Tesseract to do OCR on the image.
@@ -186,7 +189,8 @@ def extract_text_from_pdf(file_content: bytes) -> List[str]:
 # --- Helper function to extract text from an image ---
 def extract_text_from_image(file_content: bytes) -> List[str]:
     try:
-        image = Image.open(io.BytesIO(file_content))
+        image = Image.open(io.BytesIO(file_content))   
+        image = image.convert("RGB")  # OCR용으로 안전하게 변환     
         # Use Tesseract to do OCR on the image.
         text = pytesseract.image_to_string(image, lang='kor+eng')
         return [text]
