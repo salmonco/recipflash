@@ -187,8 +187,8 @@ async def translate_menus_to_korean(menus: List[Menu]) -> List[Menu]:
 def extract_text_from_pdf(file_content: bytes) -> List[str]:
     try:
         # pdftoppm 경로 지정 for ec2
-        # images = convert_from_bytes(file_content, poppler_path="/usr/bin") # pdftoppm 위치
-        images = convert_from_bytes(file_content)
+        images = convert_from_bytes(file_content, poppler_path="/usr/bin") # pdftoppm 위치
+        # images = convert_from_bytes(file_content)
         text_list = []
         for image in images:
             # Use Tesseract to do OCR on the image.
