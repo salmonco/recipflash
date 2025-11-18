@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import TagInput from '../components/TagInput';
 import { Menu } from '../models/Menu';
 import { colors, typography } from '../styles/theme';
 import { trpc } from '../trpc';
@@ -51,11 +52,13 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
   const [isEditingModalVisible, setIsEditingModalVisible] = useState(false);
   const [editingMenuId, setEditingMenuId] = useState<number | null>(null);
   const [editingMenuName, setEditingMenuName] = useState('');
-  const [editingMenuIngredients, setEditingMenuIngredients] = useState('');
+  const [editingMenuIngredients, setEditingMenuIngredients] = useState<
+    string[]
+  >([]);
 
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [newMenuName, setNewMenuName] = useState('');
-  const [newMenuIngredients, setNewMenuIngredients] = useState('');
+  const [newMenuIngredients, setNewMenuIngredients] = useState<string[]>([]);
 
   const updateMenuMutation = trpc.menu.updateMenu.useMutation();
   const deleteMenuMutation = trpc.menu.deleteMenu.useMutation();
@@ -101,7 +104,7 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
       const result = await updateMenuMutation.mutateAsync({
         id: editingMenuId,
         name: editingMenuName,
-        ingredients: editingMenuIngredients,
+        ingredients: editingMenuIngredients, // Removed .join(', ')
       });
 
       if (result.success) {
@@ -117,7 +120,7 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
                   ? {
                       ...menu,
                       name: editingMenuName,
-                      ingredients: editingMenuIngredients,
+                      ingredients: editingMenuIngredients, // Updated to array
                     }
                   : menu,
               ),
@@ -182,7 +185,7 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
       const result = await createMenuMutation.mutateAsync({
         recipeId,
         name: newMenuName,
-        ingredients: newMenuIngredients,
+        ingredients: newMenuIngredients, // Removed .join(', ')
       });
 
       if (result.success) {
@@ -199,7 +202,7 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
         });
         setIsAddModalVisible(false);
         setNewMenuName('');
-        setNewMenuIngredients('');
+        setNewMenuIngredients([]); // Clear as array
       } else {
         throw new Error(result.errorMessage || '메뉴 추가에 실패했습니다.');
       }
@@ -273,7 +276,9 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
                     </Pressable>
                   </View>
                 </View>
-                <Text style={styles.cardIngredients}>{item.ingredients}</Text>
+                <Text style={styles.cardIngredients}>
+                  {item.ingredients.join(', ')}
+                </Text>
               </View>
             )}
           />
@@ -301,13 +306,10 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
                 onChangeText={setEditingMenuName}
                 placeholderTextColor={colors.gray}
               />
-              <TextInput
-                style={[styles.input, styles.multilineInput]}
-                placeholder="재료"
+              <TagInput
                 value={editingMenuIngredients}
-                onChangeText={setEditingMenuIngredients}
-                multiline
-                placeholderTextColor={colors.gray}
+                onChange={setEditingMenuIngredients}
+                placeholder="재료"
               />
               <View style={styles.modalButtonContainer}>
                 <Pressable
@@ -348,13 +350,10 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
                 onChangeText={setNewMenuName}
                 placeholderTextColor={colors.gray}
               />
-              <TextInput
-                style={[styles.input, styles.multilineInput]}
-                placeholder="재료"
+              <TagInput
                 value={newMenuIngredients}
-                onChangeText={setNewMenuIngredients}
-                multiline
-                placeholderTextColor={colors.gray}
+                onChange={setNewMenuIngredients}
+                placeholder="재료"
               />
               <View style={styles.modalButtonContainer}>
                 <Pressable
@@ -413,6 +412,7 @@ const styles = StyleSheet.create({
     ...typography.title,
     flex: 1,
     marginRight: 16,
+    maxHeight: 100,
   },
   randomButton: {
     backgroundColor: colors.primary,

@@ -1,37 +1,31 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../src/generated/prisma"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String?  @unique
+  id        Int       @id @default(autoincrement())
+  email     String?   @unique
   name      String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
   accounts  Account[]
   recipes   Recipe[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  deletedAt DateTime? // Soft deletion field
 }
 
 model Account {
-  id           Int    @id @default(autoincrement())
-  provider     String
-  providerId   String
-  user         User   @relation(fields: [userId], references: [id])
-  userId       Int
+  id         Int    @id @default(autoincrement())
+  provider   String
+  providerId String
+  userId     Int
+  user       User   @relation(fields: [userId], references: [id])
 
   @@unique([provider, providerId])
 }
@@ -40,16 +34,49 @@ model Recipe {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
   title     String
+  userId    Int?
   menus     Menu[]
   user      User?    @relation(fields: [userId], references: [id])
-  userId    Int?
 }
 
 model Menu {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  name      String
-  ingredients String
-  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  recipeId  Int
+  id          Int          @id @default(autoincrement())
+  createdAt   DateTime     @default(now())
+  name        String
+  recipeId    Int
+  ingredients Ingredient[]
+  recipe      Recipe       @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+}
+
+model Ingredient {
+  id        Int       @id @default(autoincrement())
+  createdat DateTime? @default(now()) @db.Timestamp(6)
+  name      String?
+  menuId    Int?
+  menu      Menu?     @relation(fields: [menuId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "Ingredient_menuid_fkey")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model bundles {
+  id                  String    @id @db.Uuid
+  platform            platforms
+  should_force_update Boolean
+  enabled             Boolean
+  file_hash           String
+  git_commit_hash     String?
+  message             String?
+  channel             String    @default("production")
+  storage_uri         String
+  target_app_version  String?
+  fingerprint_hash    String?
+  metadata            Json?     @default("{}")
+
+  @@index([channel])
+  @@index([fingerprint_hash])
+  @@index([target_app_version])
+}
+
+enum platforms {
+  ios
+  android
 }

@@ -85,8 +85,12 @@ def parse_llm_response_to_menus(llm_output: str) -> List[Menu]:
                                 new_key = field_renames.get(key.lower(), key)
                                 processed_item[new_key] = value
 
-                            if "name" in processed_item and "ingredients" in processed_item:
-                                menus_list.append(Menu(name=processed_item["name"], ingredients=processed_item["ingredients"]))
+                            if "name" in processed_item:
+                                processed_item["ingredients"] = str(processed_item.get("ingredients", ""))
+                                menus_list.append(Menu(
+                                    name=str(processed_item["name"]),
+                                    ingredients=processed_item["ingredients"]
+                                ))
                     return menus_list # Return the list, even if it's empty
             except json.JSONDecodeError:
                 # Continue to next pattern if parsing fails
@@ -110,8 +114,12 @@ def parse_llm_response_to_menus(llm_output: str) -> List[Menu]:
                     new_key = field_renames.get(key.lower(), key)
                     processed_item[new_key] = value
 
-                if "name" in processed_item and "ingredients" in processed_item:
-                    menus_list.append(Menu(name=processed_item["name"], ingredients=processed_item["ingredients"]))
+                if "name" in processed_item:
+                    processed_item["ingredients"] = str(processed_item.get("ingredients", ""))
+                    menus_list.append(Menu(
+                        name=str(processed_item["name"]),
+                        ingredients=processed_item["ingredients"]
+                    ))
         except json.JSONDecodeError:
             pass
 
@@ -130,8 +138,12 @@ def parse_llm_response_to_menus(llm_output: str) -> List[Menu]:
                         new_key = field_renames.get(key.lower(), key)
                         processed_item[new_key] = value
 
-                    if "name" in processed_item and "ingredients" in processed_item:
-                        menus_list.append(Menu(name=processed_item["name"], ingredients=processed_item["ingredients"]))
+                    if "name" in processed_item:
+                        processed_item["ingredients"] = str(processed_item.get("ingredients", ""))
+                        menus_list.append(Menu(
+                            name=str(processed_item["name"]),
+                            ingredients=processed_item["ingredients"]
+                        ))
             return menus_list # Return the list, even if it's empty
     except json.JSONDecodeError:
         pass
@@ -175,8 +187,8 @@ async def translate_menus_to_korean(menus: List[Menu]) -> List[Menu]:
 def extract_text_from_pdf(file_content: bytes) -> List[str]:
     try:
         # pdftoppm 경로 지정 for ec2
-        images = convert_from_bytes(file_content, poppler_path="/usr/bin") # pdftoppm 위치
-        # images = convert_from_bytes(file_content)
+        # images = convert_from_bytes(file_content, poppler_path="/usr/bin") # pdftoppm 위치
+        images = convert_from_bytes(file_content)
         text_list = []
         for image in images:
             # Use Tesseract to do OCR on the image.

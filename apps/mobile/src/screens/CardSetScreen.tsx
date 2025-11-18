@@ -129,7 +129,7 @@ const CardSetScreen = ({ route }: CardSetScreenProps) => {
             style={[styles.card, styles.cardBack, backAnimatedStyle]}
           >
             <View style={styles.cardTextContainer}>
-              <Text style={styles.cardText}>{item.ingredients}</Text>
+              <Text style={styles.cardText}>{item.ingredients.join(', ')}</Text>
             </View>
           </Animated.View>
         </TouchableOpacity>

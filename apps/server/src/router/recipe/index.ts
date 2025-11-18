@@ -6,7 +6,7 @@ import { ErrorResponse, SuccessResponse } from "../../types/type";
 type RecipeResponse = {
   id: number;
   title: string;
-  menus: { id: number; name: string; ingredients: string }[];
+  menus: { id: number; name: string; ingredients: string[] }[];
 };
 
 type RecipesResponse = {
@@ -22,9 +22,26 @@ export const recipeRouter = router({
       try {
         const recipes = await prisma.recipe.findMany({
           where: { userId: userId },
-          include: { menus: true }, // Include associated menus
+          include: {
+            menus: {
+              include: {
+                ingredients: true,
+              },
+            },
+          },
         });
-        return { success: true, data: { recipes } };
+
+        const formattedRecipes = recipes.map((recipe) => ({
+          ...recipe,
+          menus: recipe.menus.map((menu) => ({
+            ...menu,
+            ingredients: menu.ingredients
+              .map((ingredient) => ingredient.name)
+              .filter((name): name is string => name !== null),
+          })),
+        }));
+
+        return { success: true, data: { recipes: formattedRecipes } };
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Unknown error";
@@ -46,7 +63,13 @@ export const recipeRouter = router({
         try {
           const recipe = await prisma.recipe.findFirst({
             where: { id: id, userId: userId },
-            include: { menus: true }, // Include associated menus
+            include: {
+              menus: {
+                include: {
+                  ingredients: true,
+                },
+              },
+            },
           });
           if (!recipe) {
             return {
@@ -55,7 +78,18 @@ export const recipeRouter = router({
               errorMessage: "Recipe not found.",
             };
           }
-          return { success: true, data: recipe };
+
+          const formattedRecipe = {
+            ...recipe,
+            menus: recipe.menus.map((menu) => ({
+              ...menu,
+              ingredients: menu.ingredients
+                .map((ingredient) => ingredient.name)
+                .filter((name): name is string => name !== null),
+            })),
+          };
+
+          return { success: true, data: formattedRecipe };
         } catch (error) {
           const message =
             error instanceof Error ? error.message : "Unknown error";
@@ -80,9 +114,26 @@ export const recipeRouter = router({
               title: title || "레시피 모음 1",
               userId: userId,
             },
-            include: { menus: true }, // Include associated menus
+            include: {
+              menus: {
+                include: {
+                  ingredients: true,
+                },
+              },
+            },
           });
-          return { success: true, data: newRecipe };
+
+          const formattedRecipe = {
+            ...newRecipe,
+            menus: newRecipe.menus.map((menu) => ({
+              ...menu,
+              ingredients: menu.ingredients
+                .map((ingredient) => ingredient.name)
+                .filter((name): name is string => name !== null),
+            })),
+          };
+
+          return { success: true, data: formattedRecipe };
         } catch (error) {
           const message =
             error instanceof Error ? error.message : "Unknown error";
@@ -109,9 +160,26 @@ export const recipeRouter = router({
           const updatedRecipe = await prisma.recipe.update({
             where: { id, userId: ctx.user.id },
             data: { title },
-            include: { menus: true },
+            include: {
+              menus: {
+                include: {
+                  ingredients: true,
+                },
+              },
+            },
           });
-          return { success: true, data: updatedRecipe };
+
+          const formattedRecipe = {
+            ...updatedRecipe,
+            menus: updatedRecipe.menus.map((menu) => ({
+              ...menu,
+              ingredients: menu.ingredients
+                .map((ingredient) => ingredient.name)
+                .filter((name): name is string => name !== null),
+            })),
+          };
+
+          return { success: true, data: formattedRecipe };
         } catch (error) {
           const message =
             error instanceof Error ? error.message : "Unknown error";

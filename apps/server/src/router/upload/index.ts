@@ -6,7 +6,7 @@ import { prisma } from "../../prisma";
 
 const router = express.Router();
 const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+const upload = multer({ storage });
 
 router.post(
   "/upload-recipe",
@@ -80,34 +80,68 @@ router.post(
         throw new Error("AI did not return a valid menu array.");
       }
 
-      const newRecipe = await prisma.$transaction(async (tx) => {
-        let recipeTitle = req.file?.originalname || `레시피 모음`;
-        const lastDotIndex = recipeTitle.lastIndexOf(".");
-        if (lastDotIndex > 0) {
-          recipeTitle = recipeTitle.substring(0, lastDotIndex);
-        }
+      const parsedMenus = menus.map((m: any) => ({
+        name: m.name.trim(),
+        ingredients:
+          typeof m.ingredients === "string"
+            ? m.ingredients
+                .split(",")
+                .map((i: string) => i.trim())
+                .filter(Boolean)
+            : [],
+      }));
 
-        const recipe = await tx.recipe.create({
-          data: {
-            title: recipeTitle,
-            userId: userId,
-          },
-        });
+      const newRecipe = await prisma.$transaction(
+        async (tx) => {
+          let recipeTitle = req.file?.originalname || `레시피 모음`;
+          const lastDotIndex = recipeTitle.lastIndexOf(".");
+          if (lastDotIndex > 0) {
+            recipeTitle = recipeTitle.substring(0, lastDotIndex);
+          }
 
-        await tx.menu.createMany({
-          data: menus.map((menu) => ({
-            name: menu.name,
-            ingredients: menu.ingredients,
-            recipeId: recipe.id,
-          })),
-        });
+          const recipe = await tx.recipe.create({
+            data: {
+              title: recipeTitle,
+              userId,
+            },
+          });
 
-        return recipe;
-      });
+          // 메뉴 생성
+          const createdMenus = await Promise.all(
+            parsedMenus.map((m) =>
+              tx.menu.create({
+                data: { name: m.name, recipeId: recipe.id },
+              })
+            )
+          );
+
+          // 재료 bulk insert 준비
+          const allIngredients: { name: string; menuId: number }[] = [];
+          createdMenus.forEach((menu, index) => {
+            parsedMenus[index].ingredients.forEach((ingredient: string) => {
+              allIngredients.push({ name: ingredient, menuId: menu.id });
+            });
+          });
+
+          if (allIngredients.length > 0) {
+            await tx.ingredient.createMany({
+              data: allIngredients,
+              skipDuplicates: true,
+            });
+          }
+
+          return recipe;
+        },
+        { timeout: 20000 } // 20초로 늘림
+      );
 
       const result = await prisma.recipe.findUnique({
         where: { id: newRecipe.id },
-        include: { menus: true },
+        include: {
+          menus: {
+            include: { ingredients: true },
+          },
+        },
       });
 
       res.status(201).json(result);
