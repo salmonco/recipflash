@@ -82,7 +82,7 @@ export const menuRouter = router({
             data: {
               ...(name && { name }),
               ...(ingredients !== undefined && {
-                Ingredient: {
+                ingredients: {
                   create: ingredients.map((ingredientName) => ({
                     name: ingredientName,
                   })),
