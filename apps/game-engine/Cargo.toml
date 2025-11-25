@@ -1,0 +1,10 @@
+[package]
+name = "game-engine"
+version = "1.0.0"
+edition = "2025"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"

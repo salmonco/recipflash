@@ -1,0 +1,12 @@
+{
+  "name": "game-engine",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "wasm-pack build --target web --out-dir ./www/pkg",
+    "serve": "http-server ./www"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}
