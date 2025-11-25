@@ -9,6 +9,8 @@ from PIL import Image
 import io
 import json
 import re
+import asyncio
+import time
 from typing import List
 from langchain_core.runnables import RunnableLambda, Runnable
 from dotenv import load_dotenv
@@ -19,7 +21,8 @@ load_dotenv()
 pillow_heif.register_heif_opener() # image/heic 파일도 읽을 수 있도록 등록
 
 # tesseract 경로 지정 for ec2
-pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"  # which tesseract 출력값
+# TODO: 로컬 서버에서 주석 처리 필요
+# pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"  # which tesseract 출력값
 
 # --- FastAPI App Initialization ---
 app = FastAPI(
@@ -163,37 +166,92 @@ async def translate_to_korean_llm(text: str) -> str:
     translated_text = await chain.ainvoke({"text": text})
     return translated_text.strip()
 
+# ===== 변경 전 코드 (순차 번역) =====
+# 성능 비교를 위해 아래 주석을 해제하고 "변경 후 코드" 부분을 주석 처리하면
+# 변경 전 순차 처리 방식으로 실행됩니다.
+#
+# async def translate_menus_to_korean(menus: List[Menu]) -> List[Menu]:
+#     translated_menus = []
+#     for menu in menus:
+#         is_korean_menu = any('\uac00' <= char <= '\ud7a3' for char in menu.name)
+#         is_korean_ingredients = any('\uac00' <= char <= '\ud7a3' for char in menu.ingredients)
+
+#         new_menu = menu.name
+#         new_ingredients = menu.ingredients
+
+#         if not is_korean_menu:
+#             new_menu = await translate_to_korean_llm(menu.name)
+#         if not is_korean_ingredients:
+#             new_ingredients = await translate_to_korean_llm(menu.ingredients)
+
+#         translated_menus.append(Menu(name=new_menu, ingredients=new_ingredients))
+#     return translated_menus
+# ===== 변경 전 코드 끝 =====
+
+# ===== 변경 후 코드 (병렬 번역) =====
 async def translate_menus_to_korean(menus: List[Menu]) -> List[Menu]:
-    translated_menus = []
-    for menu in menus:
-        # Simple language detection (can be improved with a library like `langdetect`)
-        # For now, assume if it's not obviously Korean, translate it.
-        # This is a very basic check and might not be accurate for all cases.
+    # 병렬 번역: 모든 번역 작업을 동시에 실행
+    async def translate_single_menu(menu: Menu) -> Menu:
         is_korean_menu = any('\uac00' <= char <= '\ud7a3' for char in menu.name)
         is_korean_ingredients = any('\uac00' <= char <= '\ud7a3' for char in menu.ingredients)
 
-        new_menu = menu.name
-        new_ingredients = menu.ingredients
+        # 번역이 필요한 경우에만 비동기 작업 생성
+        name_task = translate_to_korean_llm(menu.name) if not is_korean_menu else None
+        ingredients_task = translate_to_korean_llm(menu.ingredients) if not is_korean_ingredients else None
 
-        if not is_korean_menu:
-            new_menu = await translate_to_korean_llm(menu.name)
-        if not is_korean_ingredients:
-            new_ingredients = await translate_to_korean_llm(menu.ingredients)
+        # 필요한 번역 작업만 병렬 실행
+        tasks = []
+        if name_task:
+            tasks.append(name_task)
+        if ingredients_task:
+            tasks.append(ingredients_task)
 
-        translated_menus.append(Menu(name=new_menu, ingredients=new_ingredients))
+        if tasks:
+            results = await asyncio.gather(*tasks)
+            result_idx = 0
+            new_menu = results[result_idx] if name_task else menu.name
+            result_idx += 1 if name_task else 0
+            new_ingredients = results[result_idx] if ingredients_task else menu.ingredients
+        else:
+            new_menu = menu.name
+            new_ingredients = menu.ingredients
+
+        return Menu(name=new_menu, ingredients=new_ingredients)
+
+    # 모든 메뉴 번역을 병렬로 처리
+    translated_menus = await asyncio.gather(*[translate_single_menu(menu) for menu in menus])
     return translated_menus
+# ===== 변경 후 코드 끝 =====
 
 # --- Helper function to extract text from PDF ---
 def extract_text_from_pdf(file_content: bytes) -> List[str]:
     try:
+        start_time = time.time()
+        print(f"[PERF] Starting PDF to image conversion...")
+
         # pdftoppm 경로 지정 for ec2
-        images = convert_from_bytes(file_content, poppler_path="/usr/bin") # pdftoppm 위치
-        # images = convert_from_bytes(file_content)
+        # TODO: 로컬 서버에서 주석 처리 필요
+        conversion_start = time.time()
+        # images = convert_from_bytes(file_content, poppler_path="/usr/bin") # pdftoppm 위치
+        images = convert_from_bytes(file_content) # pdftoppm 위치
+        conversion_time = time.time() - conversion_start
+        print(f"[PERF] PDF to image conversion took {conversion_time:.2f}s for {len(images)} pages")
+
         text_list = []
-        for image in images:
+        ocr_start = time.time()
+        for i, image in enumerate(images):
+            page_ocr_start = time.time()
             # Use Tesseract to do OCR on the image.
             text = pytesseract.image_to_string(image, lang='kor+eng')
+            page_ocr_time = time.time() - page_ocr_start
+            print(f"[PERF] OCR for page {i+1} took {page_ocr_time:.2f}s")
             text_list.append(text)
+
+        total_ocr_time = time.time() - ocr_start
+        total_time = time.time() - start_time
+        print(f"[PERF] Total OCR time: {total_ocr_time:.2f}s")
+        print(f"[PERF] Total PDF extraction time: {total_time:.2f}s")
+
         return text_list
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to extract text from PDF using OCR: {e}")
@@ -201,16 +259,29 @@ def extract_text_from_pdf(file_content: bytes) -> List[str]:
 # --- Helper function to extract text from an image ---
 def extract_text_from_image(file_content: bytes) -> List[str]:
     try:
-        image = Image.open(io.BytesIO(file_content))   
-        image = image.convert("RGB")  # OCR용으로 안전하게 변환     
+        start_time = time.time()
+        print(f"[PERF] Starting image OCR...")
+
+        image = Image.open(io.BytesIO(file_content))
+        image = image.convert("RGB")  # OCR용으로 안전하게 변환
+
+        ocr_start = time.time()
         # Use Tesseract to do OCR on the image.
         text = pytesseract.image_to_string(image, lang='kor+eng')
+        ocr_time = time.time() - ocr_start
+
+        total_time = time.time() - start_time
+        print(f"[PERF] Image OCR took {ocr_time:.2f}s")
+        print(f"[PERF] Total image extraction time: {total_time:.2f}s")
+
         return [text]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to extract text from image using OCR: {e}")
 
 # --- Helper function to generate menus from text ---
 async def generate_menus_from_text(recipe_text: str) -> MenuResponse:
+    start_time = time.time()
+
     if not recipe_text.strip():
         return MenuResponse(menus=[]) # Return empty if no text is provided
 
@@ -237,28 +308,89 @@ JSON 응답:
     # Chain for parsing only
     parsing_chain = menu_prompt | llm | (lambda x: x.content) | RunnableLambda(parse_llm_response_to_menus)
 
+    llm_start = time.time()
     parsed_menus = await parsing_chain.ainvoke({"recipe_text": recipe_text})
+    llm_time = time.time() - llm_start
 
-    print(f"parsed_menus: {parsed_menus}")  # Debugging output
+    print(f"[PERF] LLM parsing took {llm_time:.2f}s, parsed {len(parsed_menus)} menus")
 
     # Apply translation separately
+    translation_start = time.time()
     translated_menus = await translate_menus_to_korean(parsed_menus)
+    translation_time = time.time() - translation_start
 
-    print(f"translated_menus: {translated_menus}")  # Debugging output
+    total_time = time.time() - start_time
+    print(f"[PERF] Translation took {translation_time:.2f}s")
+    print(f"[PERF] Total page processing took {total_time:.2f}s")
 
     return MenuResponse(menus=translated_menus)
 
-async def generate_menus_from_text_util(recipe_text_list: List[str]) -> MenuResponse:
-    # recipe_text_list를 순회하며 각 텍스트를 개별적으로 처리 후 결과를 합침
-    all_menus = []
-    # 해당 text가 배열에서 몇 번째인지 출력
-    for i, recipe_text in enumerate(recipe_text_list):
-        print(f"recipe_text[{i}]: {recipe_text}")  # Debugging output
+# ===== 변경 전 코드 (순차 처리) =====
+# 성능 비교를 위해 아래 주석을 해제하고 "변경 후 코드" 부분을 주석 처리하면
+# 변경 전 순차 처리 방식으로 실행됩니다.
+#
+# async def generate_menus_from_text_util(recipe_text_list: List[str]) -> MenuResponse:
+#     # recipe_text_list를 순회하며 각 텍스트를 개별적으로 처리 후 결과를 합침
+#     start_time = time.time()
+#     print(f"\n{'='*60}")
+#     print(f"[PERF] Starting SEQUENTIAL processing of {len(recipe_text_list)} pages")
+#     print(f"{'='*60}\n")
 
-        menu_response = await generate_menus_from_text(recipe_text)
+#     all_menus = []
+#     # 해당 text가 배열에서 몇 번째인지 출력
+#     for i, recipe_text in enumerate(recipe_text_list):
+#         print(f"[PERF] Processing page {i+1}/{len(recipe_text_list)}...")
+#         menu_response = await generate_menus_from_text(recipe_text)
+#         all_menus.extend(menu_response.menus)
+#         print(f"[PERF] Page {i+1} generated {len(menu_response.menus)} menus")
+
+#     total_time = time.time() - start_time
+#     print(f"\n{'='*60}")
+#     print(f"[PERF] SUMMARY (SEQUENTIAL):")
+#     print(f"[PERF] Total pages: {len(recipe_text_list)}")
+#     print(f"[PERF] Total menus generated: {len(all_menus)}")
+#     print(f"[PERF] Total time: {total_time:.2f}s")
+#     print(f"{'='*60}\n")
+
+#     return MenuResponse(menus=all_menus)
+# ===== 변경 전 코드 끝 =====
+
+# ===== 변경 후 코드 (병렬 처리) =====
+async def generate_menus_from_text_util(recipe_text_list: List[str]) -> MenuResponse:
+    # 병렬 처리: 모든 페이지를 동시에 처리
+    start_time = time.time()
+    print(f"\n{'='*60}")
+    print(f"[PERF] Starting PARALLEL processing of {len(recipe_text_list)} pages")
+    print(f"{'='*60}\n")
+
+    # 모든 페이지에 대해 병렬로 메뉴 생성 작업 실행
+    tasks = [generate_menus_from_text(recipe_text) for recipe_text in recipe_text_list]
+    parallel_start = time.time()
+    results = await asyncio.gather(*tasks)
+    parallel_time = time.time() - parallel_start
+
+    # 결과 합치기
+    all_menus = []
+    for i, menu_response in enumerate(results):
+        print(f"[PERF] Page {i+1} generated {len(menu_response.menus)} menus")
         all_menus.extend(menu_response.menus)
 
+    total_time = time.time() - start_time
+    avg_time_per_page = total_time / len(recipe_text_list) if recipe_text_list else 0
+
+    print(f"\n{'='*60}")
+    print(f"[PERF] SUMMARY (PARALLEL):")
+    print(f"[PERF] Total pages: {len(recipe_text_list)}")
+    print(f"[PERF] Total menus generated: {len(all_menus)}")
+    print(f"[PERF] Parallel processing time: {parallel_time:.2f}s")
+    print(f"[PERF] Total time: {total_time:.2f}s")
+    print(f"[PERF] Average per page: {avg_time_per_page:.2f}s")
+    print(f"[PERF] Estimated sequential time: {avg_time_per_page * len(recipe_text_list):.2f}s")
+    print(f"[PERF] Speedup: {(avg_time_per_page * len(recipe_text_list)) / total_time:.2f}x")
+    print(f"{'='*60}\n")
+
     return MenuResponse(menus=all_menus)
+# ===== 변경 후 코드 끝 =====
 
 # --- API Endpoints ---
 @app.get("/")
@@ -269,11 +401,19 @@ def read_root():
 @app.post("/generate/menus", response_model=MenuResponse)
 async def upload_recipe(file: UploadFile = File(...)):
     """Generate menus from an uploaded PDF or image file."""
+    request_start = time.time()
     content_type = file.content_type
-    print(f"Received file with content type: {content_type}")
+    print(f"\n{'#'*60}")
+    print(f"[PERF] NEW REQUEST - File type: {content_type}")
+    print(f"{'#'*60}\n")
 
     try:
+        file_read_start = time.time()
         file_content = await file.read()
+        file_read_time = time.time() - file_read_start
+        file_size_mb = len(file_content) / (1024 * 1024)
+        print(f"[PERF] File read took {file_read_time:.2f}s (size: {file_size_mb:.2f}MB)")
+
         text_list = []
 
         if content_type == "application/pdf":
@@ -283,9 +423,17 @@ async def upload_recipe(file: UploadFile = File(...)):
         else:
             raise HTTPException(status_code=400, detail="Unsupported file type. Please upload a PDF or an image.")
 
-        print(f"Extracted page/image count: {len(text_list)}")  # Debugging output
+        print(f"[PERF] Extracted {len(text_list)} page(s)")
 
-        return await generate_menus_from_text_util(text_list)
+        result = await generate_menus_from_text_util(text_list)
+
+        total_request_time = time.time() - request_start
+        print(f"\n{'#'*60}")
+        print(f"[PERF] TOTAL REQUEST TIME: {total_request_time:.2f}s")
+        print(f"[PERF] Total menus in response: {len(result.menus)}")
+        print(f"{'#'*60}\n")
+
+        return result
 
     except HTTPException as e:
         raise e

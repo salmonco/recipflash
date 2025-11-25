@@ -10,3 +10,4 @@ langchain-openai
 pytesseract
 pdf2image
 pillow-heif
+requests
