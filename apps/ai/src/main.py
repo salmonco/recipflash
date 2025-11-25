@@ -35,7 +35,26 @@ app = FastAPI(
 # llm = ChatOllama(model="llama3")
 
 # Uncomment the following line to use OpenAI
-llm = ChatOpenAI(model="gpt-3.5-turbo")
+# temperature=0.0: 일관된 결과 생성 (같은 입력 → 같은 출력)
+# seed: 완전한 재현성 보장 (동일 입력 → 동일 출력)
+# response_format: JSON 형식 강제 (파싱 오류 방지)
+
+# 메뉴 파싱용 LLM (JSON mode)
+llm = ChatOpenAI(
+    model="gpt-3.5-turbo-1106",  # JSON mode 지원 모델
+    temperature=0.0,
+    model_kwargs={
+        "seed": 42,
+        "response_format": {"type": "json_object"}  # JSON 응답 강제
+    }
+)
+
+# 번역용 LLM (JSON mode 없음)
+llm_translate = ChatOpenAI(
+    model="gpt-3.5-turbo",
+    temperature=0.0,
+    model_kwargs={"seed": 42}
+)
 
 # --- API Models ---
 class Menu(BaseModel):
@@ -129,10 +148,15 @@ def parse_llm_response_to_menus(llm_output: str) -> List[Menu]:
     if menus_list:
         return menus_list
 
-    # Strategy 3: Fallback - try to parse the entire output as a single JSON array
-    # This is less robust if there's conversational text, but good as a last resort
+    # Strategy 3: Fallback - try to parse the entire output as JSON
     try:
         data = json.loads(llm_output.strip())
+
+        # If data is an object with "menus" key (JSON mode response)
+        if isinstance(data, dict) and "menus" in data:
+            data = data["menus"]
+
+        # Process the array
         if isinstance(data, list):
             for item in data:
                 if isinstance(item, dict):
@@ -161,8 +185,8 @@ async def translate_to_korean_llm(text: str) -> str:
     translation_prompt = PromptTemplate.from_template(
         "Translate the following text into Korean. Respond ONLY with the translated text, no extra words or explanations:\n{text}"
     )
-    # Use the same LLM instance for translation
-    chain = translation_prompt | llm | (lambda x: x.content)
+    # Use translation LLM (without JSON mode)
+    chain = translation_prompt | llm_translate | (lambda x: x.content)
     translated_text = await chain.ainvoke({"text": text})
     return translated_text.strip()
 
@@ -244,7 +268,10 @@ def extract_text_from_pdf(file_content: bytes) -> List[str]:
             # Use Tesseract to do OCR on the image.
             text = pytesseract.image_to_string(image, lang='kor+eng')
             page_ocr_time = time.time() - page_ocr_start
-            print(f"[PERF] OCR for page {i+1} took {page_ocr_time:.2f}s")
+            # OCR 변동성 확인을 위한 로깅
+            text_preview = text[:100].replace('\n', ' ') if len(text) > 100 else text.replace('\n', ' ')
+            print(f"[PERF] OCR for page {i+1} took {page_ocr_time:.2f}s (length: {len(text)} chars)")
+            print(f"[DEBUG] OCR preview: {text_preview}...")
             text_list.append(text)
 
         total_ocr_time = time.time() - ocr_start
@@ -270,8 +297,11 @@ def extract_text_from_image(file_content: bytes) -> List[str]:
         text = pytesseract.image_to_string(image, lang='kor+eng')
         ocr_time = time.time() - ocr_start
 
+        # OCR 변동성 확인을 위한 로깅
+        text_preview = text[:100].replace('\n', ' ') if len(text) > 100 else text.replace('\n', ' ')
         total_time = time.time() - start_time
-        print(f"[PERF] Image OCR took {ocr_time:.2f}s")
+        print(f"[PERF] Image OCR took {ocr_time:.2f}s (length: {len(text)} chars)")
+        print(f"[DEBUG] OCR preview: {text_preview}...")
         print(f"[PERF] Total image extraction time: {total_time:.2f}s")
 
         return [text]
@@ -286,21 +316,40 @@ async def generate_menus_from_text(recipe_text: str) -> MenuResponse:
         return MenuResponse(menus=[]) # Return empty if no text is provided
 
     menu_prompt = PromptTemplate(
-        template="""다음 레시피 텍스트에서 메뉴 JSON 배열을 생성하세요. 모든 내용은 한국어여야 합니다.
-각 메뉴는 'name'과 'ingredients' 키를 가진 JSON 객체여야 합니다.
-예시:
-[
-  {{"name": "아샷추", "ingredients": "아이스티 300ml, 샷"}},
-  {{"name": "카라멜 마끼아또", "ingredients": "카라멜소스 30g, 설탕시럽 2P, 스팀우유 250ml"}},
-  {{"name": "헤이즐넛아메리카노", "ingredients": "샷, 헤이즐넛시럽 2P"}},
-  {{"name": "레몬에이드", "ingredients": "사이다 가득(250ml), 레몬퓨레 1.5P + 슈가시럽 1P + 레몬슬라이스 + 애플민트"}},
-  {{"name": "플레인요거트스무디", "ingredients": "우유 200ml, 요거트파우더 6래들 + 슈가시럽 1P"}},
-]
+        template="""Extract menus from the recipe text and respond in json format.
+
+다음 레시피 텍스트에서 메뉴를 추출하여 JSON 형식으로 응답하세요.
+
+중요 규칙:
+1. 각 메뉴는 정확히 한 번만 포함하세요 (중복 제거)
+2. "아이스"와 "핫"은 별도 메뉴로 분리하지 마세요 (예: "아이스 아메리카노", "핫 아메리카노" → "아메리카노" 하나로)
+3. 사이즈 차이(Tall, Grande, Venti 등)는 별도 메뉴로 분리하지 마세요
+4. 명확하게 구분되는 메뉴만 추출하세요
+5. 모든 내용은 한국어여야 합니다
+
+Return json in this format:
+{{
+  "menus": [
+    {{"name": "메뉴이름", "ingredients": "재료1, 재료2, 재료3"}},
+    {{"name": "메뉴이름2", "ingredients": "재료1, 재료2"}}
+  ]
+}}
+
+Example json response:
+{{
+  "menus": [
+    {{"name": "아샷추", "ingredients": "아이스티 300ml, 샷"}},
+    {{"name": "카라멜 마끼아또", "ingredients": "카라멜소스 30g, 설탕시럽 2P, 스팀우유 250ml"}},
+    {{"name": "헤이즐넛아메리카노", "ingredients": "샷, 헤이즐넛시럽 2P"}}
+  ]
+}}
+
 레시피 텍스트:
 ---
 {recipe_text}
 ---
-JSON 응답:
+
+json response:
 """,
         input_variables=["recipe_text"],
     )
@@ -313,6 +362,7 @@ JSON 응답:
     llm_time = time.time() - llm_start
 
     print(f"[PERF] LLM parsing took {llm_time:.2f}s, parsed {len(parsed_menus)} menus")
+    print(f"[DEBUG] Parsed menu names: {[menu.name for menu in parsed_menus[:3]]}..." if len(parsed_menus) > 3 else f"[DEBUG] Parsed menu names: {[menu.name for menu in parsed_menus]}")
 
     # Apply translation separately
     translation_start = time.time()
@@ -320,7 +370,8 @@ JSON 응답:
     translation_time = time.time() - translation_start
 
     total_time = time.time() - start_time
-    print(f"[PERF] Translation took {translation_time:.2f}s")
+    print(f"[PERF] Translation took {translation_time:.2f}s, result: {len(translated_menus)} menus")
+    print(f"[DEBUG] Final menu names: {[menu.name for menu in translated_menus[:3]]}..." if len(translated_menus) > 3 else f"[DEBUG] Final menu names: {[menu.name for menu in translated_menus]}")
     print(f"[PERF] Total page processing took {total_time:.2f}s")
 
     return MenuResponse(menus=translated_menus)
@@ -357,8 +408,26 @@ JSON 응답:
 
 # ===== 변경 후 코드 (병렬 처리) =====
 async def generate_menus_from_text_util(recipe_text_list: List[str]) -> MenuResponse:
-    # 병렬 처리: 모든 페이지를 동시에 처리
     start_time = time.time()
+
+    # 단일 페이지는 순차 처리가 더 빠름 (병렬 오버헤드 방지)
+    if len(recipe_text_list) == 1:
+        print(f"\n{'='*60}")
+        print(f"[PERF] Single page - using SEQUENTIAL processing")
+        print(f"{'='*60}\n")
+
+        menu_response = await generate_menus_from_text(recipe_text_list[0])
+        total_time = time.time() - start_time
+
+        print(f"\n{'='*60}")
+        print(f"[PERF] SUMMARY (SEQUENTIAL - Single Page):")
+        print(f"[PERF] Total menus generated: {len(menu_response.menus)}")
+        print(f"[PERF] Total time: {total_time:.2f}s")
+        print(f"{'='*60}\n")
+
+        return menu_response
+
+    # 다중 페이지는 병렬 처리로 성능 향상
     print(f"\n{'='*60}")
     print(f"[PERF] Starting PARALLEL processing of {len(recipe_text_list)} pages")
     print(f"{'='*60}\n")
