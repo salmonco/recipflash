@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import DocumentPicker from 'react-native-document-picker';
+import { colors, typography } from '../styles/theme';
 
 interface Menu {
   name: string;
@@ -293,14 +294,14 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
           icon: '📄',
           title: 'OCR 처리 중',
           subtitle: '문서를 스캔하고 텍스트를 추출하는 중입니다...',
-          color: '#FF9500',
+          color: colors.primary, // Changed to primary color
         };
       case 'llm':
         return {
           icon: '🤖',
           title: 'AI 분석 중',
           subtitle: '메뉴를 분석하고 정리하는 중입니다...',
-          color: '#007AFF',
+          color: colors.primary, // Changed to primary color
         };
       case 'complete':
         return {
@@ -324,8 +325,8 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>개선된 레시피 업로드</Text>
-        <Text style={styles.subtitle}>병렬 스트리밍 (OCR + AI 병렬 처리)</Text>
+        <Text style={styles.title}>레시피 등록하기</Text>
+        <Text style={styles.subtitle}>파일을 업로드만 하면 돼요</Text>
       </View>
 
       {!isUploading && (
@@ -418,39 +419,39 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#F2F2F7',
+    padding: 24,
+    backgroundColor: colors.background,
   },
   header: {
     marginBottom: 20,
     alignItems: 'center',
   },
   title: {
+    ...typography.title,
     fontSize: 24,
-    fontWeight: 'bold',
     marginBottom: 8,
-    color: '#000',
   },
   subtitle: {
+    ...typography.body,
     fontSize: 14,
-    color: '#8E8E93',
+    color: colors.gray,
   },
   uploadButton: {
-    backgroundColor: '#007AFF',
-    padding: 18,
-    borderRadius: 12,
+    backgroundColor: colors.primary,
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 30,
     alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: '#007AFF',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   uploadButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
+    ...typography.subtitle,
+    color: colors.text,
   },
   progressContainer: {
     marginBottom: 20,
@@ -477,11 +478,12 @@ const styles = StyleSheet.create({
   stageTitle: {
     fontSize: 20,
     fontWeight: 'bold',
+    color: '#000',
     marginBottom: 4,
   },
   stageSubtitle: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: colors.gray,
   },
   pageProgressContainer: {
     backgroundColor: 'white',
@@ -508,7 +510,7 @@ const styles = StyleSheet.create({
   progressPercentage: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#007AFF',
+    color: colors.primary,
   },
   progressBarContainer: {
     height: 8,
@@ -519,12 +521,12 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: '100%',
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
     borderRadius: 4,
   },
   statsText: {
     fontSize: 13,
-    color: '#8E8E93',
+    color: colors.gray,
     textAlign: 'center',
   },
   spinner: {
@@ -544,7 +546,7 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   menuCountBadge: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -574,8 +576,8 @@ const styles = StyleSheet.create({
   menuNumber: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#007AFF',
-    backgroundColor: '#007AFF20',
+    color: colors.primary,
+    backgroundColor: colors.primary + '20',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
@@ -591,7 +593,7 @@ const styles = StyleSheet.create({
   },
   menuIngredients: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: colors.gray,
     lineHeight: 20,
   },
 });
