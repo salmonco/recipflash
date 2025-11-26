@@ -7,6 +7,7 @@ import { menuRouter } from "./router/menu";
 import { recipeRouter } from "./router/recipe";
 import { testRouter } from "./router/test";
 import { uploadRouter } from "./router/upload";
+import { streamingUploadRouter } from "./router/upload/streaming";
 import { router } from "./trpc";
 
 initFirebaseAdmin();
@@ -25,6 +26,7 @@ export type AppRouter = typeof appRouter;
 const app = express();
 app.use(express.json()); // Add this line to parse JSON bodies
 app.use(uploadRouter);
+app.use(streamingUploadRouter); // 스트리밍 라우터 추가
 
 // --- tRPC Middleware ---
 app.use(

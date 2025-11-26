@@ -1,4 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.responses import StreamingResponse
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
@@ -248,7 +249,7 @@ async def translate_menus_to_korean(menus: List[Menu]) -> List[Menu]:
 # ===== 변경 후 코드 끝 =====
 
 # --- Helper function to extract text from PDF ---
-def extract_text_from_pdf(file_content: bytes) -> List[str]:
+async def extract_text_from_pdf(file_content: bytes) -> List[str]:
     try:
         start_time = time.time()
         print(f"[PERF] Starting PDF to image conversion...")
@@ -261,22 +262,33 @@ def extract_text_from_pdf(file_content: bytes) -> List[str]:
         conversion_time = time.time() - conversion_start
         print(f"[PERF] PDF to image conversion took {conversion_time:.2f}s for {len(images)} pages")
 
-        text_list = []
-        ocr_start = time.time()
-        for i, image in enumerate(images):
+        # 병렬 OCR 처리
+        async def ocr_single_page(index: int, image):
             page_ocr_start = time.time()
-            # Use Tesseract to do OCR on the image.
-            text = pytesseract.image_to_string(image, lang='kor+eng')
+            # pytesseract는 동기 함수이므로 asyncio.to_thread로 비동기 실행
+            text = await asyncio.to_thread(pytesseract.image_to_string, image, 'kor+eng')
             page_ocr_time = time.time() - page_ocr_start
+
             # OCR 변동성 확인을 위한 로깅
             text_preview = text[:100].replace('\n', ' ') if len(text) > 100 else text.replace('\n', ' ')
-            print(f"[PERF] OCR for page {i+1} took {page_ocr_time:.2f}s (length: {len(text)} chars)")
+            print(f"[PERF] OCR for page {index+1} took {page_ocr_time:.2f}s (length: {len(text)} chars)")
             print(f"[DEBUG] OCR preview: {text_preview}...")
-            text_list.append(text)
+
+            return (index, text)
+
+        ocr_start = time.time()
+        print(f"[PERF] Starting parallel OCR for {len(images)} pages...")
+
+        # 모든 페이지를 병렬로 OCR 처리
+        tasks = [ocr_single_page(i, image) for i, image in enumerate(images)]
+        results = await asyncio.gather(*tasks)
+
+        # 순서대로 정렬
+        text_list = [text for index, text in sorted(results, key=lambda x: x[0])]
 
         total_ocr_time = time.time() - ocr_start
         total_time = time.time() - start_time
-        print(f"[PERF] Total OCR time: {total_ocr_time:.2f}s")
+        print(f"[PERF] Total OCR time (parallel): {total_ocr_time:.2f}s")
         print(f"[PERF] Total PDF extraction time: {total_time:.2f}s")
 
         return text_list
@@ -284,7 +296,7 @@ def extract_text_from_pdf(file_content: bytes) -> List[str]:
         raise HTTPException(status_code=500, detail=f"Failed to extract text from PDF using OCR: {e}")
 
 # --- Helper function to extract text from an image ---
-def extract_text_from_image(file_content: bytes) -> List[str]:
+async def extract_text_from_image(file_content: bytes) -> List[str]:
     try:
         start_time = time.time()
         print(f"[PERF] Starting image OCR...")
@@ -293,8 +305,8 @@ def extract_text_from_image(file_content: bytes) -> List[str]:
         image = image.convert("RGB")  # OCR용으로 안전하게 변환
 
         ocr_start = time.time()
-        # Use Tesseract to do OCR on the image.
-        text = pytesseract.image_to_string(image, lang='kor+eng')
+        # Use Tesseract to do OCR on the image (async)
+        text = await asyncio.to_thread(pytesseract.image_to_string, image, 'kor+eng')
         ocr_time = time.time() - ocr_start
 
         # OCR 변동성 확인을 위한 로깅
@@ -461,6 +473,52 @@ async def generate_menus_from_text_util(recipe_text_list: List[str]) -> MenuResp
     return MenuResponse(menus=all_menus)
 # ===== 변경 후 코드 끝 =====
 
+# --- Streaming Helper for real-time updates ---
+async def generate_menus_from_text_streaming(recipe_text_list: List[str]):
+    """
+    스트리밍용: 각 페이지를 순차 처리하며 완료 시마다 결과 전송
+    """
+    start_time = time.time()
+    total_pages = len(recipe_text_list)
+
+    print(f"\n{'='*60}")
+    print(f"[STREAM] Starting streaming processing of {total_pages} pages")
+    print(f"{'='*60}\n")
+
+    for i, recipe_text in enumerate(recipe_text_list):
+        page_num = i + 1
+        page_start = time.time()
+
+        print(f"[STREAM] Processing page {page_num}/{total_pages}...")
+
+        # 각 페이지 처리
+        menu_response = await generate_menus_from_text(recipe_text)
+        page_time = time.time() - page_start
+
+        print(f"[STREAM] Page {page_num} completed in {page_time:.2f}s, generated {len(menu_response.menus)} menus")
+
+        # 진행 상황과 메뉴 전송
+        yield {
+            "type": "progress",
+            "page": page_num,
+            "total_pages": total_pages,
+            "progress": int((page_num / total_pages) * 100),
+            "menus": [menu.dict() for menu in menu_response.menus],
+            "page_time": round(page_time, 2)
+        }
+
+    total_time = time.time() - start_time
+    print(f"\n{'='*60}")
+    print(f"[STREAM] All pages completed in {total_time:.2f}s")
+    print(f"{'='*60}\n")
+
+    # 완료 메시지
+    yield {
+        "type": "complete",
+        "total_time": round(total_time, 2),
+        "total_pages": total_pages
+    }
+
 # --- API Endpoints ---
 @app.get("/")
 def read_root():
@@ -486,9 +544,9 @@ async def upload_recipe(file: UploadFile = File(...)):
         text_list = []
 
         if content_type == "application/pdf":
-            text_list = extract_text_from_pdf(file_content)
+            text_list = await extract_text_from_pdf(file_content)
         elif content_type and content_type.startswith("image/"):
-            text_list = extract_text_from_image(file_content)
+            text_list = await extract_text_from_image(file_content)
         else:
             raise HTTPException(status_code=400, detail="Unsupported file type. Please upload a PDF or an image.")
 
@@ -510,6 +568,195 @@ async def upload_recipe(file: UploadFile = File(...)):
         # Log the full error for debugging
         print(f"An unexpected error occurred: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to process file and generate menus: {e}")
+
+@app.post("/generate/menus/stream-parallel")
+async def upload_recipe_stream_parallel(file: UploadFile = File(...)):
+    """
+    병렬 스트리밍 (버퍼링): 모든 페이지를 동시에 처리하고, 완료되는 대로 순서를 맞춰 전송
+    Server-Sent Events (SSE) 형식으로 응답
+
+    동작 방식:
+    - 모든 페이지를 병렬로 처리 시작
+    - 페이지 3이 먼저 완료되면 버퍼에 저장
+    - 페이지 1이 완료되면 즉시 전송
+    - 페이지 2가 완료되면 2와 버퍼의 3을 연속 전송
+
+    장점:
+    - 첫 결과가 빠름 (가장 빠른 페이지가 완료되는 즉시)
+    - 전체 시간이 짧음 (병렬 처리 효과)
+    - 순서 보장 (페이지 1, 2, 3... 순서대로 전송)
+
+    추천: 대부분의 경우 이 모드 사용 ⭐
+    """
+    request_start = time.time()
+    content_type = file.content_type
+    print(f"\n{'#'*60}")
+    print(f"[PARALLEL-STREAM] NEW PARALLEL STREAMING REQUEST - File type: {content_type}")
+    print(f"{'#'*60}\n")
+
+    async def event_generator():
+        try:
+            # 파일 읽기
+            file_read_start = time.time()
+            file_content = await file.read()
+            file_read_time = time.time() - file_read_start
+            file_size_mb = len(file_content) / (1024 * 1024)
+            print(f"[PARALLEL-STREAM] File read took {file_read_time:.2f}s (size: {file_size_mb:.2f}MB)")
+
+            # OCR 실행
+            text_list = []
+            if content_type == "application/pdf":
+                text_list = await extract_text_from_pdf(file_content)
+            elif content_type and content_type.startswith("image/"):
+                text_list = await extract_text_from_image(file_content)
+            else:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Unsupported file type'})}\n\n"
+                return
+
+            print(f"[PARALLEL-STREAM] Extracted {len(text_list)} page(s)")
+
+            # 초기 상태 전송
+            yield f"data: {json.dumps({'type': 'init', 'total_pages': len(text_list)})}\n\n"
+
+            # 병렬로 모든 페이지 처리 시작
+            total_pages = len(text_list)
+
+            # 각 페이지에 인덱스를 붙여서 추적
+            async def process_page_with_index(index: int, recipe_text: str):
+                page_start = time.time()
+                menu_response = await generate_menus_from_text(recipe_text)
+                page_time = time.time() - page_start
+                print(f"[PARALLEL-STREAM] Page {index + 1} processing completed in {page_time:.2f}s")
+                return {
+                    "index": index,
+                    "menu_response": menu_response,
+                    "page_time": page_time
+                }
+
+            # 모든 페이지를 병렬로 처리 (as_completed로 완료되는 대로 처리)
+            print(f"[PARALLEL-STREAM] Starting parallel processing of all {total_pages} pages...")
+            tasks = [process_page_with_index(i, text) for i, text in enumerate(text_list)]
+
+            # 버퍼링으로 순서 보장
+            buffer = {}  # {page_number: result}
+            next_page_to_send = 1
+            completed_count = 0
+
+            # 완료되는 대로 처리하되, 순서대로 전송
+            for coro in asyncio.as_completed(tasks):
+                result = await coro
+                page_num = result["index"] + 1
+                completed_count += 1
+
+                print(f"[PARALLEL-STREAM] Page {page_num} completed ({completed_count}/{total_pages})")
+
+                # 버퍼에 저장
+                buffer[page_num] = result
+
+                # 순서대로 전송 가능한 페이지들 모두 전송
+                while next_page_to_send in buffer:
+                    result_to_send = buffer.pop(next_page_to_send)
+                    send_page_num = result_to_send["index"] + 1
+
+                    print(f"[PARALLEL-STREAM] Sending page {send_page_num} results")
+
+                    # 진행 상황과 메뉴 전송
+                    yield f"data: {json.dumps({
+                        'type': 'progress',
+                        'page': send_page_num,
+                        'total_pages': total_pages,
+                        'progress': int((next_page_to_send / total_pages) * 100),
+                        'menus': [menu.dict() for menu in result_to_send['menu_response'].menus],
+                        'page_time': round(result_to_send['page_time'], 2)
+                    })}\n\n"
+
+                    next_page_to_send += 1
+
+            total_request_time = time.time() - request_start
+            print(f"\n{'#'*60}")
+            print(f"[PARALLEL-STREAM] TOTAL PARALLEL STREAMING TIME: {total_request_time:.2f}s")
+            print(f"{'#'*60}\n")
+
+            # 완료 메시지
+            yield f"data: {json.dumps({
+                'type': 'complete',
+                'total_time': round(total_request_time, 2),
+                'total_pages': total_pages
+            })}\n\n"
+
+        except Exception as e:
+            print(f"[PARALLEL-STREAM] Error occurred: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+@app.post("/generate/menus/stream")
+async def upload_recipe_stream(file: UploadFile = File(...)):
+    """
+    순차 스트리밍: 페이지별로 순서대로 메뉴를 생성하며 즉시 결과 전송
+    Server-Sent Events (SSE) 형식으로 응답
+    순서가 보장되지만, 병렬 스트리밍보다 느릴 수 있음
+    """
+    request_start = time.time()
+    content_type = file.content_type
+    print(f"\n{'#'*60}")
+    print(f"[STREAM] NEW STREAMING REQUEST - File type: {content_type}")
+    print(f"{'#'*60}\n")
+
+    async def event_generator():
+        try:
+            # 파일 읽기
+            file_read_start = time.time()
+            file_content = await file.read()
+            file_read_time = time.time() - file_read_start
+            file_size_mb = len(file_content) / (1024 * 1024)
+            print(f"[STREAM] File read took {file_read_time:.2f}s (size: {file_size_mb:.2f}MB)")
+
+            # OCR 실행
+            text_list = []
+            if content_type == "application/pdf":
+                text_list = await extract_text_from_pdf(file_content)
+            elif content_type and content_type.startswith("image/"):
+                text_list = await extract_text_from_image(file_content)
+            else:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Unsupported file type'})}\n\n"
+                return
+
+            print(f"[STREAM] Extracted {len(text_list)} page(s)")
+
+            # 초기 상태 전송
+            yield f"data: {json.dumps({'type': 'init', 'total_pages': len(text_list)})}\n\n"
+
+            # 스트리밍으로 처리
+            async for result in generate_menus_from_text_streaming(text_list):
+                yield f"data: {json.dumps(result)}\n\n"
+
+            total_request_time = time.time() - request_start
+            print(f"\n{'#'*60}")
+            print(f"[STREAM] TOTAL STREAMING TIME: {total_request_time:.2f}s")
+            print(f"{'#'*60}\n")
+
+        except Exception as e:
+            print(f"[STREAM] Error occurred: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"  # Nginx buffering 비활성화
+        }
+    )
 
 # To run this server:
 # 1. Make sure Ollama is running (e.g., 'ollama serve')
