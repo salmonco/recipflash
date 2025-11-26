@@ -96,6 +96,8 @@ const MenuItem = ({ menu, index }: { menu: Menu; index: number }) => {
 const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
   // --- State ---
   const [isUploading, setIsUploading] = useState(false);
+  const [isUploadComplete, setIsUploadComplete] = useState(false);
+  const [recipeTitle, setRecipeTitle] = useState('');
   const [progress, setProgress] = useState(0);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -165,6 +167,9 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
     type: string,
   ) => {
     setIsUploading(true);
+    setIsUploadComplete(false);
+    const title = name.substring(0, name.lastIndexOf('.')) || '새로운 레시피';
+    setRecipeTitle(title);
     setProgress(0);
     setCurrentPage(0);
     setMenus([]);
@@ -172,6 +177,10 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
     setStartTime(Date.now());
     setProcessingStage('idle');
     progressAnim.setValue(0);
+    navigation.setOptions({
+      headerRight: () => null,
+      title: '레시피 생성 중...',
+    });
 
     try {
       const user = auth().currentUser;
@@ -231,9 +240,9 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
             xhr.responseText,
           );
           Alert.alert('업로드 실패', `서버 오류: ${xhr.status}`);
+          setIsUploading(false);
+          stopPulseAnimation();
         }
-        setIsUploading(false);
-        stopPulseAnimation();
       };
 
       xhr.onerror = () => {
@@ -257,9 +266,6 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
     }
   };
 
-  /**
-   * SSE 메시지 처리
-   */
   const handleSSEMessage = (data: ProgressData) => {
     switch (data.type) {
       case 'ocr_start':
@@ -289,11 +295,15 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
       case 'complete':
         setProcessingStage('complete');
         stopPulseAnimation();
-        Alert.alert(
-          '업로드 완료!',
-          `총 ${data.totalMenus}개의 메뉴가 생성되었습니다.`,
-          [{ text: '확인', onPress: () => navigation.navigate('RecipeList') }],
-        );
+        setIsUploadComplete(true);
+        navigation.setOptions({
+          title: recipeTitle,
+          headerRight: () => (
+            <Pressable onPress={() => navigation.navigate('RecipeList')}>
+              <Text style={styles.doneButton}>완료</Text>
+            </Pressable>
+          ),
+        });
         break;
       case 'error':
         Alert.alert('오류', data.message || '처리 중 오류가 발생했습니다');
@@ -366,96 +376,105 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
   // --- Render ---
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>레시피 등록하기</Text>
-        <Text style={styles.subtitle}>
-          파일을 업로드만 하면 AI가 레시피를 만들어요!
-        </Text>
-      </View>
-
-      {!isUploading && (
-        <Pressable
-          onPressIn={onPressIn}
-          onPressOut={onPressOut}
-          onPress={handlePickDocument}
-        >
-          <Animated.View
-            style={[
-              styles.uploadButton,
-              { transform: [{ scale: buttonScale }] },
-            ]}
+      {!isUploading ? (
+        <View style={styles.header}>
+          <Text style={styles.title}>레시피 등록하기</Text>
+          <Text style={styles.subtitle}>
+            파일을 업로드만 하면 AI가 레시피를 만들어요!
+          </Text>
+          <Pressable
+            onPressIn={onPressIn}
+            onPressOut={onPressOut}
+            onPress={handlePickDocument}
+            style={{ width: '100%', marginTop: 30 }}
           >
-            <Text style={styles.uploadButtonText}>🍳 파일 선택하기</Text>
-          </Animated.View>
-        </Pressable>
-      )}
+            <Animated.View
+              style={[
+                styles.uploadButton,
+                { transform: [{ scale: buttonScale }] },
+              ]}
+            >
+              <Text style={styles.uploadButtonText}>🍳 파일 선택하기</Text>
+            </Animated.View>
+          </Pressable>
+        </View>
+      ) : (
+        <>
+          {!isUploadComplete && (
+            <View style={styles.progressContainer}>
+              <Animated.View
+                style={[
+                  styles.stageIndicator,
+                  { transform: [{ scale: pulseAnim }] },
+                ]}
+              >
+                <Text style={styles.stageIcon}>{stageDisplay.icon}</Text>
+                <View>
+                  <Text
+                    style={[styles.stageTitle, { color: stageDisplay.color }]}
+                  >
+                    {stageDisplay.title}
+                  </Text>
+                  {stageDisplay.subtitle && (
+                    <Text style={styles.stageSubtitle}>
+                      {stageDisplay.subtitle}
+                    </Text>
+                  )}
+                </View>
+              </Animated.View>
 
-      {isUploading && (
-        <View style={styles.progressContainer}>
-          <Animated.View
-            style={[
-              styles.stageIndicator,
-              { transform: [{ scale: pulseAnim }] },
-            ]}
-          >
-            <Text style={styles.stageIcon}>{stageDisplay.icon}</Text>
-            <View>
-              <Text style={[styles.stageTitle, { color: stageDisplay.color }]}>
-                {stageDisplay.title}
-              </Text>
-              {stageDisplay.subtitle && (
-                <Text style={styles.stageSubtitle}>
-                  {stageDisplay.subtitle}
-                </Text>
+              {(processingStage === 'llm' || processingStage === 'ocr') &&
+                totalPages > 0 && (
+                  <View style={styles.pageProgressContainer}>
+                    <View style={styles.pageProgressHeader}>
+                      <Text style={styles.pageProgressText}>
+                        페이지 {currentPage} / {totalPages}
+                      </Text>
+                      <Text style={styles.progressPercentage}>{progress}%</Text>
+                    </View>
+                    <View style={styles.progressBarContainer}>
+                      <Animated.View
+                        style={[styles.progressBar, { width: progressWidth }]}
+                      />
+                    </View>
+                    {firstResultTime && (
+                      <Text style={styles.statsText}>
+                        ⚡ 첫 결과까지 {(firstResultTime / 1000).toFixed(1)}초
+                      </Text>
+                    )}
+                  </View>
+                )}
+
+              {processingStage !== 'complete' && (
+                <ActivityIndicator
+                  size="large"
+                  color={stageDisplay.color}
+                  style={styles.spinner}
+                />
               )}
             </View>
-          </Animated.View>
+          )}
 
-          {(processingStage === 'llm' || processingStage === 'ocr') &&
-            totalPages > 0 && (
-              <View style={styles.pageProgressContainer}>
-                <View style={styles.pageProgressHeader}>
-                  <Text style={styles.pageProgressText}>
-                    페이지 {currentPage} / {totalPages}
-                  </Text>
-                  <Text style={styles.progressPercentage}>{progress}%</Text>
+          <ScrollView
+            style={styles.menuList}
+            showsVerticalScrollIndicator={false}
+          >
+            {menus.length > 0 && (
+              <View style={styles.menuListHeader}>
+                <Text style={styles.menuListTitle}>
+                  {isUploadComplete ? recipeTitle : '생성된 메뉴'}
+                </Text>
+                <View style={styles.menuCountBadge}>
+                  <Text style={styles.menuCountText}>{menus.length}</Text>
                 </View>
-                <View style={styles.progressBarContainer}>
-                  <Animated.View
-                    style={[styles.progressBar, { width: progressWidth }]}
-                  />
-                </View>
-                {firstResultTime && (
-                  <Text style={styles.statsText}>
-                    ⚡ 첫 결과까지 {(firstResultTime / 1000).toFixed(1)}초
-                  </Text>
-                )}
               </View>
             )}
-
-          {processingStage !== 'complete' && (
-            <ActivityIndicator
-              size="large"
-              color={stageDisplay.color}
-              style={styles.spinner}
-            />
-          )}
-        </View>
+            {menus.map((menu, index) => (
+              <MenuItem key={menu.name + index} menu={menu} index={index} />
+            ))}
+          </ScrollView>
+        </>
       )}
-
-      <ScrollView style={styles.menuList} showsVerticalScrollIndicator={false}>
-        {menus.length > 0 && (
-          <View style={styles.menuListHeader}>
-            <Text style={styles.menuListTitle}>생성된 메뉴</Text>
-            <View style={styles.menuCountBadge}>
-              <Text style={styles.menuCountText}>{menus.length}</Text>
-            </View>
-          </View>
-        )}
-        {menus.map((menu, index) => (
-          <MenuItem key={menu.name + index} menu={menu} index={index} />
-        ))}
-      </ScrollView>
     </View>
   );
 };
@@ -468,14 +487,21 @@ const styles = StyleSheet.create({
     padding: 24,
     backgroundColor: colors.background,
   },
+  doneButton: {
+    ...typography.subtitle,
+    color: colors.primary,
+    fontSize: 16,
+  },
   header: {
-    marginBottom: 30,
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   title: {
     ...typography.title,
     fontSize: 28,
     marginBottom: 12,
+    textAlign: 'center',
   },
   subtitle: {
     ...typography.body,
