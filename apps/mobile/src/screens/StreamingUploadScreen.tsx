@@ -14,6 +14,8 @@ import {
 import DocumentPicker from 'react-native-document-picker';
 import Toast from 'react-native-toast-message';
 import { colors, typography } from '../styles/theme';
+import { trpc } from '../trpc';
+import { trackEvent } from '../utils/tracker';
 
 interface Menu {
   name: string;
@@ -94,6 +96,9 @@ const MenuItem = ({ menu, index }: { menu: Menu; index: number }) => {
 // --- Main Screen Component ---
 
 const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
+  // --- TRPC Mutations ---
+  const createRecipeMutation = trpc.recipe.createRecipe.useMutation();
+
   // --- State ---
   const [isUploading, setIsUploading] = useState(false);
   const [isUploadComplete, setIsUploadComplete] = useState(false);
@@ -369,6 +374,40 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
     }
   };
 
+  const handleManualCreate = async () => {
+    trackEvent('manual_create_button_clicked');
+    setIsUploading(true);
+
+    try {
+      const result = await createRecipeMutation.mutateAsync({
+        title: '레시피 모음',
+      });
+
+      if (!result.success) {
+        throw new Error(result.errorMessage || '레시피 생성에 실패했습니다.');
+      }
+
+      Toast.show({
+        type: 'success',
+        text1: '성공',
+        text2: '레시피가 생성되었습니다!',
+        visibilityTime: 5000,
+      });
+      navigation.navigate('RecipeList');
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
+      Toast.show({
+        type: 'error',
+        text1: '오류',
+        text2: message,
+        visibilityTime: 5000,
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const getStageDisplay = () => {
     switch (processingStage) {
       case 'ocr':
@@ -421,7 +460,7 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
             onPressIn={onPressIn}
             onPressOut={onPressOut}
             onPress={handlePickDocument}
-            style={{ width: '100%', marginTop: 30 }}
+            style={styles.buttonContainer}
           >
             <Animated.View
               style={[
@@ -431,6 +470,14 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
             >
               <Text style={styles.uploadButtonText}>🍳 파일 선택하기</Text>
             </Animated.View>
+          </Pressable>
+          <Pressable
+            onPress={handleManualCreate}
+            style={styles.manualButtonContainer}
+          >
+            <View style={styles.manualButton}>
+              <Text style={styles.manualButtonText}>📝 수동 등록하기</Text>
+            </View>
           </Pressable>
         </View>
       ) : (
@@ -560,6 +607,26 @@ const styles = StyleSheet.create({
     ...typography.subtitle,
     color: colors.text,
     fontSize: 18,
+  },
+  manualButton: {
+    backgroundColor: colors.white,
+    paddingVertical: 18,
+    borderRadius: 99,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  manualButtonText: {
+    ...typography.subtitle,
+    color: colors.text,
+    fontSize: 16,
+  },
+  buttonContainer: {
+    width: '100%',
+    marginTop: 30,
+  },
+  manualButtonContainer: {
+    width: '100%',
   },
   progressContainer: {
     marginBottom: 20,
