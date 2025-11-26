@@ -193,6 +193,8 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
 
       const formData = new FormData();
       formData.append('recipe', { uri, name, type });
+      // 한글 파일명을 별도로 전송
+      formData.append('fileName', name);
 
       const xhr = new XMLHttpRequest();
       let buffer = '';

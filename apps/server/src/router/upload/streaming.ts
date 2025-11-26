@@ -87,7 +87,10 @@ router.post(
       }
 
       // 3. 레시피 생성 (메뉴는 나중에 추가)
-      let recipeTitle = req.file?.originalname || `레시피 모음`;
+      // fileName 필드가 있으면 사용, 없으면 originalname 사용
+      let recipeTitle =
+        req.body.fileName || req.file?.originalname || `레시피 모음`;
+      // 확장자 제거
       const lastDotIndex = recipeTitle.lastIndexOf(".");
       if (lastDotIndex > 0) {
         recipeTitle = recipeTitle.substring(0, lastDotIndex);
@@ -324,7 +327,10 @@ router.post(
       console.log("Received response from AI server.");
 
       // 3. 레시피 생성
-      let recipeTitle = req.file?.originalname || `레시피 모음`;
+      // fileName 필드가 있으면 사용, 없으면 originalname 사용
+      let recipeTitle =
+        req.body.fileName || req.file?.originalname || `레시피 모음`;
+      // 확장자 제거
       const lastDotIndex = recipeTitle.lastIndexOf(".");
       if (lastDotIndex > 0) {
         recipeTitle = recipeTitle.substring(0, lastDotIndex);
