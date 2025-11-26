@@ -10,7 +10,7 @@ import {
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { httpBatchLink } from '@trpc/client';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import BootSplash from 'react-native-bootsplash';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -20,7 +20,7 @@ import LoginScreen from './src/screens/LoginScreen';
 import MenuListScreen from './src/screens/MenuListScreen';
 import RecipeListScreen from './src/screens/RecipeListScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
-import UploadScreen from './src/screens/UploadScreen';
+import StreamingUploadScreen from './src/screens/StreamingUploadScreen';
 import { colors, typography } from './src/styles/theme';
 import { trpc } from './src/trpc';
 import { customLink } from './src/trpc/customLink';
@@ -83,21 +83,7 @@ function App(): React.JSX.Element {
     trackAppStart();
   }, []);
 
-  useEffect(() => {
-    const state = navigationRef.current?.getRootState();
-
-    if (state) {
-      routeNameRef.current = getActiveRouteName(state);
-    }
-  }, []);
-
-  useEffect(() => {
-    setTimeout(() => {
-      BootSplash.hide();
-    }, SPLASH_SCREEN_DELAY);
-  }, []);
-
-  const getActiveRouteName = (state: NavigationState) => {
+  const getActiveRouteName = useCallback((state: NavigationState) => {
     const route = state.routes[state.index];
 
     if (route.state) {
@@ -105,7 +91,21 @@ function App(): React.JSX.Element {
     }
 
     return route.name;
-  };
+  }, []);
+
+  useEffect(() => {
+    const state = navigationRef.current?.getRootState();
+
+    if (state) {
+      routeNameRef.current = getActiveRouteName(state);
+    }
+  }, [getActiveRouteName]);
+
+  useEffect(() => {
+    setTimeout(() => {
+      BootSplash.hide();
+    }, SPLASH_SCREEN_DELAY);
+  }, []);
 
   const onStateChange = async (state: NavigationState | undefined) => {
     if (state === undefined) return;
@@ -154,9 +154,14 @@ function App(): React.JSX.Element {
                   ),
                 })}
               />
-              <Stack.Screen
+              {/* <Stack.Screen
                 name="Upload"
                 component={UploadScreen}
+                options={{ title: '레시피 업로드' }}
+              /> */}
+              <Stack.Screen
+                name="Upload"
+                component={StreamingUploadScreen}
                 options={{ title: '레시피 업로드' }}
               />
               <Stack.Screen

@@ -125,7 +125,14 @@ router.post(
             try {
               const data = JSON.parse(dataStr);
 
-              if (data.type === "init") {
+              if (
+                data.type === "ocr_start" ||
+                data.type === "ocr_complete" ||
+                data.type === "llm_start"
+              ) {
+                // OCR/LLM 진행 상태 전달
+                res.write(`data: ${JSON.stringify(data)}\n\n`);
+              } else if (data.type === "init") {
                 // 초기화 메시지 전달
                 res.write(`data: ${JSON.stringify(data)}\n\n`);
               } else if (data.type === "progress") {
@@ -144,19 +151,25 @@ router.post(
 
                 // DB에 저장
                 const createdMenus = await Promise.all(
-                  parsedMenus.map((m: { name: string; ingredients: string[] }) =>
-                    prisma.menu.create({
-                      data: { name: m.name, recipeId: recipe.id },
-                    })
+                  parsedMenus.map(
+                    (m: { name: string; ingredients: string[] }) =>
+                      prisma.menu.create({
+                        data: { name: m.name, recipeId: recipe.id },
+                      })
                   )
                 );
 
                 // 재료 저장
                 const allIngredients: { name: string; menuId: number }[] = [];
                 createdMenus.forEach((menu, index) => {
-                  parsedMenus[index].ingredients.forEach((ingredient: string) => {
-                    allIngredients.push({ name: ingredient, menuId: menu.id });
-                  });
+                  parsedMenus[index].ingredients.forEach(
+                    (ingredient: string) => {
+                      allIngredients.push({
+                        name: ingredient,
+                        menuId: menu.id,
+                      });
+                    }
+                  );
                 });
 
                 if (allIngredients.length > 0) {
@@ -245,6 +258,7 @@ router.post(
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
     res.flushHeaders();
+    console.log("SSE headers flushed for parallel upload.");
 
     try {
       // 1. S3 업로드
@@ -259,6 +273,7 @@ router.post(
           "Content-Type": req.file.mimetype,
         },
       });
+      console.log("File uploaded to S3.");
 
       // 2. AI 서버로 병렬 스트리밍 요청
       const formData = new FormData();
@@ -270,6 +285,7 @@ router.post(
         req.file.originalname
       );
 
+      console.log("Sending request to AI server for parallel processing...");
       const pythonAiResponse = await fetch(
         `${process.env.API_URL}/generate/menus/stream-parallel`,
         {
@@ -279,16 +295,33 @@ router.post(
       );
 
       if (!pythonAiResponse.ok) {
-        await pythonAiResponse.text();
+        const errorText = await pythonAiResponse.text();
+        console.error(
+          `AI server responded with status ${pythonAiResponse.status}: ${errorText}`
+        );
         res.write(
           `data: ${JSON.stringify({
             type: "error",
             message: `AI server error: ${pythonAiResponse.status}`,
+            details: errorText,
           })}\n\n`
         );
         res.end();
         return;
       }
+
+      if (!pythonAiResponse.body) {
+        console.error("Python AI server returned an empty response body.");
+        res.write(
+          `data: ${JSON.stringify({
+            type: "error",
+            message: "AI server returned an empty response body.",
+          })}\n\n`
+        );
+        res.end();
+        return;
+      }
+      console.log("Received response from AI server.");
 
       // 3. 레시피 생성
       let recipeTitle = req.file?.originalname || `레시피 모음`;
@@ -303,6 +336,7 @@ router.post(
           userId,
         },
       });
+      console.log(`Recipe created with ID: ${recipe.id}`);
 
       // 레시피 ID 전송
       res.write(
@@ -316,6 +350,7 @@ router.post(
       const allMenus: any[] = [];
       let buffer = "";
 
+      console.log("Starting to stream from Python AI server...");
       // SSE 스트림 파싱
       for await (const chunk of pythonAiResponse.body as any) {
         buffer += chunk.toString();
@@ -329,7 +364,14 @@ router.post(
             try {
               const data = JSON.parse(dataStr);
 
-              if (data.type === "init") {
+              if (
+                data.type === "ocr_start" ||
+                data.type === "ocr_complete" ||
+                data.type === "llm_start"
+              ) {
+                // OCR/LLM 진행 상태 전달
+                res.write(`data: ${JSON.stringify(data)}\n\n`);
+              } else if (data.type === "init") {
                 // 초기화 메시지 전달
                 res.write(`data: ${JSON.stringify(data)}\n\n`);
               } else if (data.type === "progress") {
@@ -348,19 +390,25 @@ router.post(
 
                 // DB에 저장
                 const createdMenus = await Promise.all(
-                  parsedMenus.map((m: { name: string; ingredients: string[] }) =>
-                    prisma.menu.create({
-                      data: { name: m.name, recipeId: recipe.id },
-                    })
+                  parsedMenus.map(
+                    (m: { name: string; ingredients: string[] }) =>
+                      prisma.menu.create({
+                        data: { name: m.name, recipeId: recipe.id },
+                      })
                   )
                 );
 
                 // 재료 저장
                 const allIngredients: { name: string; menuId: number }[] = [];
                 createdMenus.forEach((menu, index) => {
-                  parsedMenus[index].ingredients.forEach((ingredient: string) => {
-                    allIngredients.push({ name: ingredient, menuId: menu.id });
-                  });
+                  parsedMenus[index].ingredients.forEach(
+                    (ingredient: string) => {
+                      allIngredients.push({
+                        name: ingredient,
+                        menuId: menu.id,
+                      });
+                    }
+                  );
                 });
 
                 if (allIngredients.length > 0) {
@@ -398,6 +446,7 @@ router.post(
           }
         }
       }
+      console.log("Finished streaming from Python AI server.");
 
       res.end();
     } catch (error) {

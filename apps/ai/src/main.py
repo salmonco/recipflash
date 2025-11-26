@@ -603,6 +603,9 @@ async def upload_recipe_stream_parallel(file: UploadFile = File(...)):
             file_size_mb = len(file_content) / (1024 * 1024)
             print(f"[PARALLEL-STREAM] File read took {file_read_time:.2f}s (size: {file_size_mb:.2f}MB)")
 
+            # OCR 진행 상태 전송
+            yield f"data: {json.dumps({'type': 'ocr_start', 'message': 'Starting OCR processing...'})}\n\n"
+
             # OCR 실행
             text_list = []
             if content_type == "application/pdf":
@@ -615,8 +618,9 @@ async def upload_recipe_stream_parallel(file: UploadFile = File(...)):
 
             print(f"[PARALLEL-STREAM] Extracted {len(text_list)} page(s)")
 
-            # 초기 상태 전송
-            yield f"data: {json.dumps({'type': 'init', 'total_pages': len(text_list)})}\n\n"
+            # OCR 완료 및 초기 상태 전송
+            yield f"data: {json.dumps({'type': 'ocr_complete', 'total_pages': len(text_list)})}\n\n"
+            yield f"data: {json.dumps({'type': 'llm_start', 'message': 'Starting AI processing...'})}\n\n"
 
             # 병렬로 모든 페이지 처리 시작
             total_pages = len(text_list)
