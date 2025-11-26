@@ -1,15 +1,15 @@
 import { API_URL } from '@env';
 import auth from '@react-native-firebase/auth';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Animated,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import DocumentPicker from 'react-native-document-picker';
@@ -52,7 +52,49 @@ type StreamingUploadScreenProps = NativeStackScreenProps<
   'Upload'
 >;
 
+// --- AnimatedMenuItem Component ---
+
+const MenuItem = ({ menu, index }: { menu: Menu; index: number }) => {
+  const animValue = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(animValue, {
+      toValue: 1,
+      duration: 400,
+      delay: index * 100,
+      useNativeDriver: true,
+    }).start();
+  }, [animValue, index]);
+
+  const translateY = animValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [30, 0],
+  });
+
+  return (
+    <Animated.View
+      style={[
+        styles.menuItem,
+        { opacity: animValue, transform: [{ translateY }] },
+      ]}
+    >
+      <View style={styles.menuHeader}>
+        <Text style={styles.menuNumber}>{index + 1}</Text>
+        <Text style={styles.menuName} numberOfLines={1}>
+          {menu.name}
+        </Text>
+      </View>
+      <Text style={styles.menuIngredients} numberOfLines={2}>
+        {menu.ingredients}
+      </Text>
+    </Animated.View>
+  );
+};
+
+// --- Main Screen Component ---
+
 const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
+  // --- State ---
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentPage, setCurrentPage] = useState(0);
@@ -64,20 +106,31 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
   const [firstResultTime, setFirstResultTime] = useState<number | null>(null);
   const [startTime, setStartTime] = useState<number | null>(null);
 
-  // 애니메이션
-  const [pulseAnim] = useState(new Animated.Value(1));
+  // --- Animations ---
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const progressAnim = useRef(new Animated.Value(0)).current;
+  const buttonScale = useRef(new Animated.Value(1)).current;
+
+  // --- Animation Effects ---
+  useEffect(() => {
+    Animated.spring(progressAnim, {
+      toValue: progress,
+      useNativeDriver: false, // 'width' is not supported by native driver
+      bounciness: 10,
+    }).start();
+  }, [progress, progressAnim]);
 
   const startPulseAnimation = () => {
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
-          toValue: 1.1,
-          duration: 1000,
+          toValue: 1.05,
+          duration: 800,
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
-          duration: 1000,
+          duration: 800,
           useNativeDriver: true,
         }),
       ]),
@@ -89,9 +142,23 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
     pulseAnim.setValue(1);
   };
 
-  /**
-   * SSE 스트리밍 처리 (병렬 모드만 사용)
-   */
+  const onPressIn = () => {
+    Animated.spring(buttonScale, {
+      toValue: 0.95,
+      useNativeDriver: true,
+      speed: 20,
+    }).start();
+  };
+
+  const onPressOut = () => {
+    Animated.spring(buttonScale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 20,
+    }).start();
+  };
+
+  // --- Data Handling ---
   const handleStreamingUpload = async (
     uri: string,
     name: string,
@@ -104,6 +171,7 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
     setFirstResultTime(null);
     setStartTime(Date.now());
     setProcessingStage('idle');
+    progressAnim.setValue(0);
 
     try {
       const user = auth().currentUser;
@@ -115,11 +183,7 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
       const token = await user.getIdToken();
 
       const formData = new FormData();
-      formData.append('recipe', {
-        uri,
-        name,
-        type,
-      });
+      formData.append('recipe', { uri, name, type });
 
       const xhr = new XMLHttpRequest();
       let buffer = '';
@@ -131,7 +195,7 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
 
         buffer += newText;
         const lines = buffer.split('\n');
-        buffer = lines.pop() || ''; // Keep the potentially incomplete last line
+        buffer = lines.pop() || '';
 
         for (const line of lines) {
           if (line.startsWith('data: ')) {
@@ -149,7 +213,6 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
       };
 
       xhr.onload = () => {
-        // Process any remaining data in the buffer
         if (buffer.startsWith('data: ')) {
           const dataStr = buffer.slice(6);
           if (dataStr.trim()) {
@@ -161,11 +224,7 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
             }
           }
         }
-
-        if (xhr.status >= 200 && xhr.status < 300) {
-          // The 'complete' event from the server should handle the final state.
-          // If not, we can force it here.
-        } else {
+        if (xhr.status < 200 || xhr.status >= 300) {
           console.error(
             'Upload failed with status:',
             xhr.status,
@@ -207,51 +266,35 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
         setProcessingStage('ocr');
         startPulseAnimation();
         break;
-
       case 'ocr_complete':
         setTotalPages(data.total_pages || 0);
         break;
-
       case 'llm_start':
         setProcessingStage('llm');
         break;
-
       case 'recipe_created':
         setRecipeId(data.recipeId || null);
         break;
-
       case 'progress':
-        // 첫 결과 시간 측정
         if (firstResultTime === null && startTime) {
           setFirstResultTime(Date.now() - startTime);
           stopPulseAnimation();
         }
-
         setCurrentPage(data.page || 0);
         setProgress(data.progress || 0);
         if (data.menus) {
           setMenus(prev => [...prev, ...data.menus!]);
         }
         break;
-
       case 'complete':
         setProcessingStage('complete');
         stopPulseAnimation();
         Alert.alert(
           '업로드 완료!',
           `총 ${data.totalMenus}개의 메뉴가 생성되었습니다.`,
-          [
-            {
-              text: '확인',
-              onPress: () => {
-                // 레시피 상세 화면으로 이동
-                navigation.navigate('RecipeList');
-              },
-            },
-          ],
+          [{ text: '확인', onPress: () => navigation.navigate('RecipeList') }],
         );
         break;
-
       case 'error':
         Alert.alert('오류', data.message || '처리 중 오류가 발생했습니다');
         setIsUploading(false);
@@ -260,16 +303,12 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
     }
   };
 
-  /**
-   * 파일 선택
-   */
   const handlePickDocument = async () => {
     try {
       const result = await DocumentPicker.pickSingle({
         type: [DocumentPicker.types.pdf, DocumentPicker.types.images],
         copyTo: 'cachesDirectory',
       });
-
       if (result.uri) {
         await handleStreamingUpload(
           result.uri,
@@ -278,9 +317,7 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
         );
       }
     } catch (error) {
-      if (DocumentPicker.isCancel(error)) {
-        console.log('Document picker cancelled');
-      } else {
+      if (!DocumentPicker.isCancel(error)) {
         console.error('Document picker error:', error);
         Alert.alert('파일 선택 오류', '파일을 선택할 수 없습니다.');
       }
@@ -293,15 +330,15 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
         return {
           icon: '📄',
           title: 'OCR 처리 중',
-          subtitle: '문서를 스캔하고 텍스트를 추출하는 중입니다...',
-          color: colors.primary, // Changed to primary color
+          subtitle: '문서를 스캔하는 중입니다...',
+          color: colors.primary,
         };
       case 'llm':
         return {
           icon: '🤖',
           title: 'AI 분석 중',
           subtitle: '메뉴를 분석하고 정리하는 중입니다...',
-          color: colors.primary, // Changed to primary color
+          color: colors.primary,
         };
       case 'complete':
         return {
@@ -313,7 +350,7 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
       default:
         return {
           icon: '⏳',
-          title: '준비 중',
+          title: '준비 중...',
           subtitle: '',
           color: '#8E8E93',
         };
@@ -321,37 +358,48 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
   };
 
   const stageDisplay = getStageDisplay();
+  const progressWidth = progressAnim.interpolate({
+    inputRange: [0, 100],
+    outputRange: ['0%', '100%'],
+  });
 
+  // --- Render ---
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>레시피 등록하기</Text>
-        <Text style={styles.subtitle}>파일을 업로드만 하면 돼요</Text>
+        <Text style={styles.subtitle}>
+          파일을 업로드만 하면 AI가 레시피를 만들어요!
+        </Text>
       </View>
 
       {!isUploading && (
-        <TouchableOpacity
-          style={styles.uploadButton}
+        <Pressable
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
           onPress={handlePickDocument}
         >
-          <Text style={styles.uploadButtonText}>📄 PDF/이미지 선택</Text>
-        </TouchableOpacity>
+          <Animated.View
+            style={[
+              styles.uploadButton,
+              { transform: [{ scale: buttonScale }] },
+            ]}
+          >
+            <Text style={styles.uploadButtonText}>🍳 파일 선택하기</Text>
+          </Animated.View>
+        </Pressable>
       )}
 
       {isUploading && (
         <View style={styles.progressContainer}>
-          {/* 처리 단계 표시 */}
           <Animated.View
             style={[
               styles.stageIndicator,
-              {
-                backgroundColor: stageDisplay.color + '20',
-                transform: [{ scale: pulseAnim }],
-              },
+              { transform: [{ scale: pulseAnim }] },
             ]}
           >
             <Text style={styles.stageIcon}>{stageDisplay.icon}</Text>
-            <View style={styles.stageTextContainer}>
+            <View>
               <Text style={[styles.stageTitle, { color: stageDisplay.color }]}>
                 {stageDisplay.title}
               </Text>
@@ -363,27 +411,28 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
             </View>
           </Animated.View>
 
-          {/* LLM 처리 중일 때만 페이지 진행률 표시 */}
-          {processingStage === 'llm' && totalPages > 0 && (
-            <View style={styles.pageProgressContainer}>
-              <View style={styles.pageProgressHeader}>
-                <Text style={styles.pageProgressText}>
-                  페이지 {currentPage} / {totalPages}
-                </Text>
-                <Text style={styles.progressPercentage}>{progress}%</Text>
+          {(processingStage === 'llm' || processingStage === 'ocr') &&
+            totalPages > 0 && (
+              <View style={styles.pageProgressContainer}>
+                <View style={styles.pageProgressHeader}>
+                  <Text style={styles.pageProgressText}>
+                    페이지 {currentPage} / {totalPages}
+                  </Text>
+                  <Text style={styles.progressPercentage}>{progress}%</Text>
+                </View>
+                <View style={styles.progressBarContainer}>
+                  <Animated.View
+                    style={[styles.progressBar, { width: progressWidth }]}
+                  />
+                </View>
+                {firstResultTime && (
+                  <Text style={styles.statsText}>
+                    ⚡ 첫 결과까지 {(firstResultTime / 1000).toFixed(1)}초
+                  </Text>
+                )}
               </View>
-              <View style={styles.progressBarContainer}>
-                <View style={[styles.progressBar, { width: `${progress}%` }]} />
-              </View>
-              {firstResultTime && (
-                <Text style={styles.statsText}>
-                  ⚡ 첫 결과: {(firstResultTime / 1000).toFixed(1)}초
-                </Text>
-              )}
-            </View>
-          )}
+            )}
 
-          {/* 로딩 인디케이터 */}
           {processingStage !== 'complete' && (
             <ActivityIndicator
               size="large"
@@ -394,27 +443,24 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
         </View>
       )}
 
-      {/* 생성된 메뉴 리스트 */}
-      <ScrollView style={styles.menuList}>
-        <View style={styles.menuListHeader}>
-          <Text style={styles.menuListTitle}>생성된 메뉴</Text>
-          <View style={styles.menuCountBadge}>
-            <Text style={styles.menuCountText}>{menus.length}</Text>
-          </View>
-        </View>
-        {menus.map((menu, index) => (
-          <View key={index} style={styles.menuItem}>
-            <View style={styles.menuHeader}>
-              <Text style={styles.menuNumber}>{index + 1}</Text>
-              <Text style={styles.menuName}>{menu.name}</Text>
+      <ScrollView style={styles.menuList} showsVerticalScrollIndicator={false}>
+        {menus.length > 0 && (
+          <View style={styles.menuListHeader}>
+            <Text style={styles.menuListTitle}>생성된 메뉴</Text>
+            <View style={styles.menuCountBadge}>
+              <Text style={styles.menuCountText}>{menus.length}</Text>
             </View>
-            <Text style={styles.menuIngredients}>{menu.ingredients}</Text>
           </View>
+        )}
+        {menus.map((menu, index) => (
+          <MenuItem key={menu.name + index} menu={menu} index={index} />
         ))}
       </ScrollView>
     </View>
   );
 };
+
+// --- Styles ---
 
 const styles = StyleSheet.create({
   container: {
@@ -423,35 +469,36 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
-    marginBottom: 20,
+    marginBottom: 30,
     alignItems: 'center',
   },
   title: {
     ...typography.title,
-    fontSize: 24,
-    marginBottom: 8,
+    fontSize: 28,
+    marginBottom: 12,
   },
   subtitle: {
     ...typography.body,
-    fontSize: 14,
+    fontSize: 16,
     color: colors.gray,
+    textAlign: 'center',
   },
   uploadButton: {
     backgroundColor: colors.primary,
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 30,
+    paddingVertical: 20,
+    borderRadius: 99,
     alignItems: 'center',
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    marginBottom: 30,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
   },
   uploadButtonText: {
     ...typography.subtitle,
     color: colors.text,
+    fontSize: 18,
   },
   progressContainer: {
     marginBottom: 20,
@@ -459,41 +506,37 @@ const styles = StyleSheet.create({
   stageIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: colors.white,
     padding: 20,
-    borderRadius: 16,
+    borderRadius: 24,
     marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowOpacity: 0.05,
+    shadowRadius: 15,
     elevation: 3,
   },
   stageIcon: {
-    fontSize: 40,
+    fontSize: 36,
     marginRight: 15,
   },
-  stageTextContainer: {
-    flex: 1,
-  },
   stageTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 4,
+    ...typography.subtitle,
   },
   stageSubtitle: {
-    fontSize: 14,
+    ...typography.body,
     color: colors.gray,
+    marginTop: 2,
   },
   pageProgressContainer: {
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     padding: 20,
-    borderRadius: 16,
+    borderRadius: 24,
     marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowOpacity: 0.05,
+    shadowRadius: 15,
     elevation: 3,
   },
   pageProgressHeader: {
@@ -503,31 +546,29 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   pageProgressText: {
-    fontSize: 16,
+    ...typography.body,
     fontWeight: '600',
-    color: '#000',
   },
   progressPercentage: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    ...typography.subtitle,
     color: colors.primary,
   },
   progressBarContainer: {
-    height: 8,
-    backgroundColor: '#E5E5EA',
-    borderRadius: 4,
+    height: 12,
+    backgroundColor: colors.background,
+    borderRadius: 6,
     overflow: 'hidden',
-    marginBottom: 12,
   },
   progressBar: {
     height: '100%',
     backgroundColor: colors.primary,
-    borderRadius: 4,
   },
   statsText: {
+    ...typography.body,
     fontSize: 13,
     color: colors.gray,
     textAlign: 'center',
+    marginTop: 15,
   },
   spinner: {
     marginTop: 10,
@@ -539,33 +580,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 15,
+    paddingHorizontal: 5,
   },
   menuListTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#000',
+    ...typography.title,
+    fontSize: 22,
   },
   menuCountBadge: {
     backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
     marginLeft: 10,
   },
   menuCountText: {
-    color: 'white',
-    fontSize: 14,
+    ...typography.body,
+    color: colors.white,
     fontWeight: 'bold',
   },
   menuItem: {
-    backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: colors.white,
+    padding: 20,
+    borderRadius: 20,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowRadius: 10,
     elevation: 2,
   },
   menuHeader: {
@@ -574,27 +615,25 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   menuNumber: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...typography.subtitle,
     color: colors.primary,
     backgroundColor: colors.primary + '20',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    marginRight: 10,
-    minWidth: 32,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     textAlign: 'center',
+    lineHeight: 36,
+    marginRight: 12,
   },
   menuName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
+    ...typography.subtitle,
     flex: 1,
   },
   menuIngredients: {
-    fontSize: 14,
+    ...typography.body,
     color: colors.gray,
     lineHeight: 20,
+    marginLeft: 48,
   },
 });
 
