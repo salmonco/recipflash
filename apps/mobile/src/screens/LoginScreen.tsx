@@ -4,7 +4,6 @@ import {
 } from '@invertase/react-native-apple-authentication';
 import React, { useState } from 'react';
 import {
-  Alert,
   Linking,
   Modal,
   Platform,
@@ -14,6 +13,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { authService } from '../services/authService';
 import { colors, typography } from '../styles/theme';
 import { trpc } from '../trpc';
@@ -38,11 +38,21 @@ const LoginScreen = () => {
           {
             onSuccess: data => {
               if (!data.success) {
-                Alert.alert('Login Failed');
+                Toast.show({
+                  type: 'error',
+                  text1: 'Login Failed',
+                  text2: '로그인에 실패했습니다.',
+                  visibilityTime: 5000,
+                });
               }
             },
             onError: error => {
-              Alert.alert('Login Error', error.message);
+              Toast.show({
+                type: 'error',
+                text1: 'Login Error',
+                text2: error.message,
+                visibilityTime: 5000,
+              });
             },
           },
         );
@@ -71,11 +81,21 @@ const LoginScreen = () => {
               setEmail('');
               setPassword('');
             } else {
-              Alert.alert('Login Failed');
+              Toast.show({
+                type: 'error',
+                text1: 'Login Failed',
+                text2: '로그인에 실패했습니다.',
+                visibilityTime: 5000,
+              });
             }
           },
           onError: error => {
-            Alert.alert('Login Error', error.message);
+            Toast.show({
+              type: 'error',
+              text1: 'Login Error',
+              text2: error.message,
+              visibilityTime: 5000,
+            });
           },
         },
       );
@@ -94,11 +114,21 @@ const LoginScreen = () => {
           {
             onSuccess: data => {
               if (!data.success) {
-                Alert.alert('Login Failed');
+                Toast.show({
+                  type: 'error',
+                  text1: 'Login Failed',
+                  text2: '로그인에 실패했습니다.',
+                  visibilityTime: 5000,
+                });
               }
             },
             onError: error => {
-              Alert.alert('Login Error', error.message);
+              Toast.show({
+                type: 'error',
+                text1: 'Login Error',
+                text2: error.message,
+                visibilityTime: 5000,
+              });
             },
           },
         );

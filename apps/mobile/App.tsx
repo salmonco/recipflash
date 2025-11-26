@@ -13,7 +13,9 @@ import { httpBatchLink } from '@trpc/client';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import BootSplash from 'react-native-bootsplash';
+import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { toastConfig } from './src/config/toastConfig';
 import { Menu } from './src/models/Menu';
 import CardSetScreen from './src/screens/CardSetScreen';
 import LoginScreen from './src/screens/LoginScreen';
@@ -179,6 +181,7 @@ function App(): React.JSX.Element {
         ) : (
           <LoginScreen />
         )}
+        <Toast config={toastConfig} topOffset={60} />
       </QueryClientProvider>
     </trpc.Provider>
   );

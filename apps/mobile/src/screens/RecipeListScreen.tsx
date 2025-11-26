@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Recipe } from '../models/Recipe';
 import { colors, typography } from '../styles/theme';
@@ -70,7 +71,12 @@ const RecipeListScreen = ({ navigation }: RecipeListScreenProps) => {
 
   const handleUpdateRecipeTitle = async () => {
     if (editingRecipeId === null) {
-      Alert.alert('오류', '선택된 레시피가 없습니다.');
+      Toast.show({
+        type: 'error',
+        text1: '오류',
+        text2: '선택된 레시피가 없습니다.',
+        visibilityTime: 5000,
+      });
       return;
     }
 
@@ -81,7 +87,12 @@ const RecipeListScreen = ({ navigation }: RecipeListScreenProps) => {
       });
 
       if (result.success) {
-        Alert.alert('성공', '레시피 제목이 업데이트되었습니다!');
+        Toast.show({
+          type: 'success',
+          text1: '성공',
+          text2: '레시피 제목이 업데이트되었습니다!',
+          visibilityTime: 5000,
+        });
         utils.recipe.getAllRecipes.setData(undefined, oldData => {
           if (!oldData?.success) return oldData;
           return {
@@ -105,7 +116,12 @@ const RecipeListScreen = ({ navigation }: RecipeListScreenProps) => {
     } catch (err) {
       const message =
         err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
-      Alert.alert('오류', message);
+      Toast.show({
+        type: 'error',
+        text1: '오류',
+        text2: message,
+        visibilityTime: 5000,
+      });
     }
   };
 
@@ -122,7 +138,12 @@ const RecipeListScreen = ({ navigation }: RecipeListScreenProps) => {
               id: recipeId,
             });
             if (result.success) {
-              Alert.alert('성공', '레시피가 삭제되었습니다.');
+              Toast.show({
+                type: 'success',
+                text1: '성공',
+                text2: '레시피가 삭제되었습니다.',
+                visibilityTime: 5000,
+              });
               utils.recipe.getAllRecipes.setData(undefined, oldData => {
                 if (!oldData?.success) return oldData;
                 return {
@@ -145,7 +166,12 @@ const RecipeListScreen = ({ navigation }: RecipeListScreenProps) => {
               err instanceof Error
                 ? err.message
                 : '알 수 없는 오류가 발생했습니다.';
-            Alert.alert('오류', message);
+            Toast.show({
+              type: 'error',
+              text1: '오류',
+              text2: message,
+              visibilityTime: 5000,
+            });
           }
         },
       },

@@ -4,7 +4,6 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   Pressable,
   ScrollView,
@@ -13,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import DocumentPicker from 'react-native-document-picker';
+import Toast from 'react-native-toast-message';
 import { colors, typography } from '../styles/theme';
 
 interface Menu {
@@ -185,7 +185,12 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
     try {
       const user = auth().currentUser;
       if (!user) {
-        Alert.alert('인증 오류', '로그인이 필요합니다.');
+        Toast.show({
+          type: 'error',
+          text1: '인증 오류',
+          text2: '로그인이 필요합니다.',
+          visibilityTime: 5000,
+        });
         setIsUploading(false);
         return;
       }
@@ -241,7 +246,12 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
             xhr.status,
             xhr.responseText,
           );
-          Alert.alert('업로드 실패', `서버 오류: ${xhr.status}`);
+          Toast.show({
+            type: 'error',
+            text1: '업로드 실패',
+            text2: `서버 오류: ${xhr.status}`,
+            visibilityTime: 5000,
+          });
           setIsUploading(false);
           stopPulseAnimation();
         }
@@ -249,7 +259,12 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
 
       xhr.onerror = () => {
         console.error('Upload failed due to a network error.');
-        Alert.alert('업로드 실패', '네트워크 오류가 발생했습니다.');
+        Toast.show({
+          type: 'error',
+          text1: '업로드 실패',
+          text2: '네트워크 오류가 발생했습니다.',
+          visibilityTime: 5000,
+        });
         setIsUploading(false);
         stopPulseAnimation();
       };
@@ -259,10 +274,12 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
       xhr.send(formData);
     } catch (error) {
       console.error('Upload setup error:', error);
-      Alert.alert(
-        '업로드 실패',
-        error instanceof Error ? error.message : '알 수 없는 오류',
-      );
+      Toast.show({
+        type: 'error',
+        text1: '업로드 실패',
+        text2: error instanceof Error ? error.message : '알 수 없는 오류',
+        visibilityTime: 5000,
+      });
       setIsUploading(false);
       stopPulseAnimation();
     }
@@ -298,6 +315,12 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
         setProcessingStage('complete');
         stopPulseAnimation();
         setIsUploadComplete(true);
+        Toast.show({
+          type: 'success',
+          text1: '업로드 완료!',
+          text2: `${data.totalMenus}개의 메뉴가 생성되었습니다.`,
+          visibilityTime: 5000,
+        });
         navigation.setOptions({
           title: recipeTitle,
           headerRight: () => (
@@ -308,7 +331,12 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
         });
         break;
       case 'error':
-        Alert.alert('오류', data.message || '처리 중 오류가 발생했습니다');
+        Toast.show({
+          type: 'error',
+          text1: '오류',
+          text2: data.message || '처리 중 오류가 발생했습니다',
+          visibilityTime: 5000,
+        });
         setIsUploading(false);
         stopPulseAnimation();
         break;
@@ -331,7 +359,12 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
     } catch (error) {
       if (!DocumentPicker.isCancel(error)) {
         console.error('Document picker error:', error);
-        Alert.alert('파일 선택 오류', '파일을 선택할 수 없습니다.');
+        Toast.show({
+          type: 'error',
+          text1: '파일 선택 오류',
+          text2: '파일을 선택할 수 없습니다.',
+          visibilityTime: 5000,
+        });
       }
     }
   };

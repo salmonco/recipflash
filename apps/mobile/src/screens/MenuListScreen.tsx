@@ -17,6 +17,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import TagInput from '../components/TagInput';
 import { Menu } from '../models/Menu';
@@ -96,7 +97,12 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
   const handleUpdateMenu = async () => {
     trackEvent('edit_menu_save');
     if (editingMenuId === null) {
-      Alert.alert('오류', '수정할 메뉴를 선택해주세요.');
+      Toast.show({
+        type: 'error',
+        text1: '오류',
+        text2: '수정할 메뉴를 선택해주세요.',
+        visibilityTime: 5000,
+      });
       return;
     }
 
@@ -108,7 +114,12 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
       });
 
       if (result.success) {
-        Alert.alert('성공', '메뉴가 성공적으로 수정되었습니다!');
+        Toast.show({
+          type: 'success',
+          text1: '성공',
+          text2: '메뉴가 성공적으로 수정되었습니다!',
+          visibilityTime: 5000,
+        });
         utils.recipe.getRecipeById.setData({ id: recipeId }, oldData => {
           if (!oldData?.success) return oldData;
           return {
@@ -134,7 +145,12 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
     } catch (err) {
       const message =
         err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
-      Alert.alert('오류', message);
+      Toast.show({
+        type: 'error',
+        text1: '오류',
+        text2: message,
+        visibilityTime: 5000,
+      });
     }
   };
 
@@ -149,7 +165,12 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
           try {
             const result = await deleteMenuMutation.mutateAsync({ id: menuId });
             if (result.success) {
-              Alert.alert('성공', '메뉴가 삭제되었습니다.');
+              Toast.show({
+                type: 'success',
+                text1: '성공',
+                text2: '메뉴가 삭제되었습니다.',
+                visibilityTime: 5000,
+              });
               utils.recipe.getRecipeById.setData({ id: recipeId }, oldData => {
                 if (!oldData?.success) return oldData;
                 return {
@@ -172,7 +193,12 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
               err instanceof Error
                 ? err.message
                 : '알 수 없는 오류가 발생했습니다.';
-            Alert.alert('오류', message);
+            Toast.show({
+              type: 'error',
+              text1: '오류',
+              text2: message,
+              visibilityTime: 5000,
+            });
           }
         },
       },
@@ -189,7 +215,12 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
       });
 
       if (result.success) {
-        Alert.alert('성공', '메뉴가 추가되었습니다!');
+        Toast.show({
+          type: 'success',
+          text1: '성공',
+          text2: '메뉴가 추가되었습니다!',
+          visibilityTime: 5000,
+        });
         utils.recipe.getRecipeById.setData({ id: recipeId }, oldData => {
           if (!oldData?.success) return oldData;
           return {
@@ -209,7 +240,12 @@ const MenuListScreen = ({ route }: MenuListScreenProps) => {
     } catch (err) {
       const message =
         err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
-      Alert.alert('오류', message);
+      Toast.show({
+        type: 'error',
+        text1: '오류',
+        text2: message,
+        visibilityTime: 5000,
+      });
     }
   };
 
