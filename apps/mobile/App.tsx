@@ -154,11 +154,6 @@ function App(): React.JSX.Element {
                   ),
                 })}
               />
-              {/* <Stack.Screen
-                name="Upload"
-                component={UploadScreen}
-                options={{ title: '레시피 업로드' }}
-              /> */}
               <Stack.Screen
                 name="Upload"
                 component={StreamingUploadScreen}
