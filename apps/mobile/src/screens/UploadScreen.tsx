@@ -12,10 +12,10 @@ import {
 } from 'react-native';
 import DocumentPicker, { types } from 'react-native-document-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Toast from 'react-native-toast-message';
 import { Recipe } from '../models/Recipe';
 import { colors, typography } from '../styles/theme';
 import { trpc } from '../trpc';
+import { showToast } from '../utils/toast/showToast';
 import { trackEvent } from '../utils/tracker';
 
 type RootStackParamList = {
@@ -74,12 +74,7 @@ const UploadScreen = ({ navigation }: UploadScreenProps) => {
       }
 
       const result = (await response.json()) as Recipe;
-      Toast.show({
-        type: 'success',
-        text1: '성공',
-        text2: '메뉴가 생성되었습니다!',
-        visibilityTime: 5000,
-      });
+      showToast('성공', '메뉴가 생성되었습니다!', { type: 'success' });
       navigation.navigate('MenuList', {
         recipeId: result.id,
         recipeTitle: result.title,
@@ -93,12 +88,7 @@ const UploadScreen = ({ navigation }: UploadScreenProps) => {
             ? err.message
             : '알 수 없는 오류가 발생했습니다.';
         setError(message);
-        Toast.show({
-          type: 'error',
-          text1: '오류',
-          text2: message,
-          visibilityTime: 5000,
-        });
+        showToast('오류', message, { type: 'error' });
       }
     } finally {
       setIsLoading(false);
@@ -119,23 +109,13 @@ const UploadScreen = ({ navigation }: UploadScreenProps) => {
         throw new Error(result.errorMessage || '레시피 생성에 실패했습니다.');
       }
 
-      Toast.show({
-        type: 'success',
-        text1: '성공',
-        text2: '레시피가 생성되었습니다!',
-        visibilityTime: 5000,
-      });
+      showToast('성공', '레시피가 생성되었습니다!', { type: 'success' });
       navigation.navigate('RecipeList');
     } catch (err) {
       const message =
         err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
       setError(message);
-      Toast.show({
-        type: 'error',
-        text1: '오류',
-        text2: message,
-        visibilityTime: 5000,
-      });
+      showToast('오류', message, { type: 'error' });
     } finally {
       setIsLoading(false);
     }

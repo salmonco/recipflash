@@ -13,10 +13,10 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import Toast from 'react-native-toast-message';
 import { authService } from '../services/authService';
 import { colors, typography } from '../styles/theme';
 import { trpc } from '../trpc';
+import { showToast } from '../utils/toast/showToast';
 import { trackEvent } from '../utils/tracker';
 
 const PRIVACY_POLICY_URL = 'https://slashpage.com/recipflash/privacy';
@@ -38,21 +38,13 @@ const LoginScreen = () => {
           {
             onSuccess: data => {
               if (!data.success) {
-                Toast.show({
+                showToast('Login Failed', '로그인에 실패했습니다.', {
                   type: 'error',
-                  text1: 'Login Failed',
-                  text2: '로그인에 실패했습니다.',
-                  visibilityTime: 5000,
                 });
               }
             },
             onError: error => {
-              Toast.show({
-                type: 'error',
-                text1: 'Login Error',
-                text2: error.message,
-                visibilityTime: 5000,
-              });
+              showToast('Login Error', error.message, { type: 'error' });
             },
           },
         );
@@ -81,21 +73,13 @@ const LoginScreen = () => {
               setEmail('');
               setPassword('');
             } else {
-              Toast.show({
+              showToast('Login Failed', '로그인에 실패했습니다.', {
                 type: 'error',
-                text1: 'Login Failed',
-                text2: '로그인에 실패했습니다.',
-                visibilityTime: 5000,
               });
             }
           },
           onError: error => {
-            Toast.show({
-              type: 'error',
-              text1: 'Login Error',
-              text2: error.message,
-              visibilityTime: 5000,
-            });
+            showToast('Login Error', error.message, { type: 'error' });
           },
         },
       );
@@ -114,21 +98,13 @@ const LoginScreen = () => {
           {
             onSuccess: data => {
               if (!data.success) {
-                Toast.show({
+                showToast('Login Failed', '로그인에 실패했습니다.', {
                   type: 'error',
-                  text1: 'Login Failed',
-                  text2: '로그인에 실패했습니다.',
-                  visibilityTime: 5000,
                 });
               }
             },
             onError: error => {
-              Toast.show({
-                type: 'error',
-                text1: 'Login Error',
-                text2: error.message,
-                visibilityTime: 5000,
-              });
+              showToast('Login Error', error.message, { type: 'error' });
             },
           },
         );
