@@ -13,6 +13,10 @@ import { httpBatchLink } from '@trpc/client';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import BootSplash from 'react-native-bootsplash';
+import {
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { toastConfig } from './src/config/toastConfig';
@@ -69,9 +73,10 @@ export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 const SPLASH_SCREEN_DELAY = 3000;
 
-function App(): React.JSX.Element {
+const AppContent = (): React.JSX.Element => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const routeNameRef = useRef<string | undefined>(undefined);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     const unsubscribe = auth().onAuthStateChanged(user => {
@@ -181,9 +186,21 @@ function App(): React.JSX.Element {
         ) : (
           <LoginScreen />
         )}
-        <Toast config={toastConfig} topOffset={60} />
+        <Toast
+          config={toastConfig}
+          topOffset={insets.top + 60}
+          bottomOffset={insets.bottom + 100}
+        />
       </QueryClientProvider>
     </trpc.Provider>
+  );
+};
+
+function App(): React.JSX.Element {
+  return (
+    <SafeAreaProvider>
+      <AppContent />
+    </SafeAreaProvider>
   );
 }
 

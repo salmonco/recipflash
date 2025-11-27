@@ -192,6 +192,7 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
       if (!user) {
         Toast.show({
           type: 'error',
+          position: 'top',
           text1: '인증 오류',
           text2: '로그인이 필요합니다.',
           visibilityTime: 5000,
@@ -253,6 +254,7 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
           );
           Toast.show({
             type: 'error',
+            position: 'top',
             text1: '업로드 실패',
             text2: `서버 오류: ${xhr.status}`,
             visibilityTime: 5000,
@@ -266,6 +268,7 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
         console.error('Upload failed due to a network error.');
         Toast.show({
           type: 'error',
+          position: 'top',
           text1: '업로드 실패',
           text2: '네트워크 오류가 발생했습니다.',
           visibilityTime: 5000,
@@ -281,6 +284,7 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
       console.error('Upload setup error:', error);
       Toast.show({
         type: 'error',
+        position: 'top',
         text1: '업로드 실패',
         text2: error instanceof Error ? error.message : '알 수 없는 오류',
         visibilityTime: 5000,
@@ -322,6 +326,7 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
         setIsUploadComplete(true);
         Toast.show({
           type: 'success',
+          position: 'bottom',
           text1: '업로드 완료!',
           text2: `${data.totalMenus}개의 메뉴가 생성되었습니다.`,
           visibilityTime: 5000,
@@ -338,6 +343,7 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
       case 'error':
         Toast.show({
           type: 'error',
+          position: 'top',
           text1: '오류',
           text2: data.message || '처리 중 오류가 발생했습니다',
           visibilityTime: 5000,
@@ -366,6 +372,7 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
         console.error('Document picker error:', error);
         Toast.show({
           type: 'error',
+          position: 'top',
           text1: '파일 선택 오류',
           text2: '파일을 선택할 수 없습니다.',
           visibilityTime: 5000,
@@ -389,6 +396,7 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
 
       Toast.show({
         type: 'success',
+        position: 'bottom',
         text1: '성공',
         text2: '레시피가 생성되었습니다!',
         visibilityTime: 5000,
@@ -399,6 +407,7 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
         err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
       Toast.show({
         type: 'error',
+        position: 'top',
         text1: '오류',
         text2: message,
         visibilityTime: 5000,
