@@ -12,9 +12,9 @@ import {
   View,
 } from 'react-native';
 import DocumentPicker from 'react-native-document-picker';
-import Toast from 'react-native-toast-message';
 import { colors, typography } from '../styles/theme';
 import { trpc } from '../trpc';
+import { showToast } from '../utils/toast/showToast';
 import { trackEvent } from '../utils/tracker';
 
 interface Menu {
@@ -190,13 +190,7 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
     try {
       const user = auth().currentUser;
       if (!user) {
-        Toast.show({
-          type: 'error',
-          position: 'top',
-          text1: '인증 오류',
-          text2: '로그인이 필요합니다.',
-          visibilityTime: 5000,
-        });
+        showToast('인증 오류', '로그인이 필요합니다.', { type: 'error' });
         setIsUploading(false);
         return;
       }
@@ -252,12 +246,8 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
             xhr.status,
             xhr.responseText,
           );
-          Toast.show({
+          showToast('업로드 실패', `서버 오류: ${xhr.status}`, {
             type: 'error',
-            position: 'top',
-            text1: '업로드 실패',
-            text2: `서버 오류: ${xhr.status}`,
-            visibilityTime: 5000,
           });
           setIsUploading(false);
           stopPulseAnimation();
@@ -266,12 +256,8 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
 
       xhr.onerror = () => {
         console.error('Upload failed due to a network error.');
-        Toast.show({
+        showToast('업로드 실패', '네트워크 오류가 발생했습니다.', {
           type: 'error',
-          position: 'top',
-          text1: '업로드 실패',
-          text2: '네트워크 오류가 발생했습니다.',
-          visibilityTime: 5000,
         });
         setIsUploading(false);
         stopPulseAnimation();
@@ -282,13 +268,11 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
       xhr.send(formData);
     } catch (error) {
       console.error('Upload setup error:', error);
-      Toast.show({
-        type: 'error',
-        position: 'top',
-        text1: '업로드 실패',
-        text2: error instanceof Error ? error.message : '알 수 없는 오류',
-        visibilityTime: 5000,
-      });
+      showToast(
+        '업로드 실패',
+        error instanceof Error ? error.message : '알 수 없는 오류',
+        { type: 'error' },
+      );
       setIsUploading(false);
       stopPulseAnimation();
     }
@@ -324,13 +308,13 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
         setProcessingStage('complete');
         stopPulseAnimation();
         setIsUploadComplete(true);
-        Toast.show({
-          type: 'success',
-          position: 'bottom',
-          text1: '업로드 완료!',
-          text2: `${data.totalMenus}개의 메뉴가 생성되었습니다.`,
-          visibilityTime: 5000,
-        });
+        showToast(
+          '업로드 완료!',
+          `${data.totalMenus}개의 메뉴가 생성되었습니다.`,
+          {
+            type: 'success',
+          },
+        );
         navigation.setOptions({
           title: recipeTitle,
           headerRight: () => (
@@ -341,12 +325,8 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
         });
         break;
       case 'error':
-        Toast.show({
+        showToast('오류', data.message || '처리 중 오류가 발생했습니다', {
           type: 'error',
-          position: 'top',
-          text1: '오류',
-          text2: data.message || '처리 중 오류가 발생했습니다',
-          visibilityTime: 5000,
         });
         setIsUploading(false);
         stopPulseAnimation();
@@ -370,12 +350,8 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
     } catch (error) {
       if (!DocumentPicker.isCancel(error)) {
         console.error('Document picker error:', error);
-        Toast.show({
+        showToast('파일 선택 오류', '파일을 선택할 수 없습니다.', {
           type: 'error',
-          position: 'top',
-          text1: '파일 선택 오류',
-          text2: '파일을 선택할 수 없습니다.',
-          visibilityTime: 5000,
         });
       }
     }
@@ -394,24 +370,12 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
         throw new Error(result.errorMessage || '레시피 생성에 실패했습니다.');
       }
 
-      Toast.show({
-        type: 'success',
-        position: 'bottom',
-        text1: '성공',
-        text2: '레시피가 생성되었습니다!',
-        visibilityTime: 5000,
-      });
+      showToast('성공', '레시피가 생성되었습니다!', { type: 'success' });
       navigation.navigate('RecipeList');
     } catch (err) {
       const message =
         err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
-      Toast.show({
-        type: 'error',
-        position: 'top',
-        text1: '오류',
-        text2: message,
-        visibilityTime: 5000,
-      });
+      showToast('오류', message, { type: 'error' });
     } finally {
       setIsUploading(false);
     }

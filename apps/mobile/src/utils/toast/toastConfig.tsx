@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ToastConfig } from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { colors, typography } from '../styles/theme';
+import { colors, typography } from '../../styles/theme';
 
 const styles = StyleSheet.create({
   toastContainer: {

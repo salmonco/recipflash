@@ -19,7 +19,6 @@ import {
 } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { toastConfig } from './src/config/toastConfig';
 import { Menu } from './src/models/Menu';
 import CardSetScreen from './src/screens/CardSetScreen';
 import LoginScreen from './src/screens/LoginScreen';
@@ -30,6 +29,7 @@ import StreamingUploadScreen from './src/screens/StreamingUploadScreen';
 import { colors, typography } from './src/styles/theme';
 import { trpc } from './src/trpc';
 import { customLink } from './src/trpc/customLink';
+import { toastConfig } from './src/utils/toast/toastConfig';
 import { trackAppStart, trackScreenView } from './src/utils/tracker';
 
 if (process.env.AMPLITUDE_API_KEY) {
