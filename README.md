@@ -1,9 +1,13 @@
-<img width="500" height="500" alt="Instagram post - 1" src="https://github.com/user-attachments/assets/ee41b439-37ec-4b32-80d0-8e2f35ff8eae" />
-<img width="500" height="500" alt="Instagram post - 2" src="https://github.com/user-attachments/assets/e2524f65-f3bc-4f36-8c28-8494a76ed18b" />
-<img width="500" height="500" alt="Instagram post - 3" src="https://github.com/user-attachments/assets/04e4828e-43cb-440d-bb4e-1222b6b61b61" />
-<img width="500" height="500" alt="Instagram post - 4" src="https://github.com/user-attachments/assets/2ae752bf-a6a5-4ff9-8cc1-2e5a0df2dc6b" />
+<img width="400" alt="Instagram post - 1" src="https://github.com/user-attachments/assets/ee41b439-37ec-4b32-80d0-8e2f35ff8eae" />
+<img width="400" alt="Instagram post - 2" src="https://github.com/user-attachments/assets/e2524f65-f3bc-4f36-8c28-8494a76ed18b" />
+<img width="400" alt="Instagram post - 3" src="https://github.com/user-attachments/assets/04e4828e-43cb-440d-bb4e-1222b6b61b61" />
+<img width="400" alt="Instagram post - 4" src="https://github.com/user-attachments/assets/2ae752bf-a6a5-4ff9-8cc1-2e5a0df2dc6b" />
 
 <br/>
+<br/>
+
+### [iOS 앱 다운로드](https://apps.apple.com/kr/app/%EB%A0%88%EC%8B%9C%ED%94%BC-%EC%99%B8%EC%9A%B0%EA%B8%B0/id6755034677)
+
 <br/>
 
 🍳 레시피북 PDF를 업로드하면 레시피 자동 생성!
