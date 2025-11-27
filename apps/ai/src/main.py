@@ -23,7 +23,7 @@ pillow_heif.register_heif_opener() # image/heic 파일도 읽을 수 있도록 �
 
 # tesseract 경로 지정 for ec2
 # TODO: 로컬 서버에서 주석 처리 필요
-# pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"  # which tesseract 출력값
+pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"  # which tesseract 출력값
 
 # --- FastAPI App Initialization ---
 app = FastAPI(
@@ -255,10 +255,10 @@ async def extract_text_from_pdf(file_content: bytes) -> List[str]:
         print(f"[PERF] Starting PDF to image conversion...")
 
         # pdftoppm 경로 지정 for ec2
-        # TODO: 로컬 서버에서 주석 처리 필요
         conversion_start = time.time()
-        # images = convert_from_bytes(file_content, poppler_path="/usr/bin") # pdftoppm 위치
-        images = convert_from_bytes(file_content) # pdftoppm 위치
+        # TODO: 로컬 서버에서 주석 처리 필요
+        images = convert_from_bytes(file_content, poppler_path="/usr/bin") # pdftoppm 위치
+        # images = convert_from_bytes(file_content) # pdftoppm 위치
         conversion_time = time.time() - conversion_start
         print(f"[PERF] PDF to image conversion took {conversion_time:.2f}s for {len(images)} pages")
 
