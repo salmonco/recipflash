@@ -171,6 +171,7 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
     name: string,
     type: string,
   ) => {
+    trackEvent('file_upload_started', { fileName: name });
     setIsUploading(true);
     setIsUploadComplete(false);
     const title = name.substring(0, name.lastIndexOf('.')) || '새로운 레시피';
@@ -335,12 +336,14 @@ const StreamingUploadScreen = ({ navigation }: StreamingUploadScreenProps) => {
   };
 
   const handlePickDocument = async () => {
+    trackEvent('file_pick_button_clicked');
     try {
       const result = await DocumentPicker.pickSingle({
         type: [DocumentPicker.types.pdf, DocumentPicker.types.images],
         copyTo: 'cachesDirectory',
       });
       if (result.uri) {
+        trackEvent('file_selected', { fileName: result.name });
         await handleStreamingUpload(
           result.uri,
           result.name || 'recipe.pdf',
