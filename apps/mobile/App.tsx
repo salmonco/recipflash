@@ -10,8 +10,10 @@ import {
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { httpBatchLink } from '@trpc/client';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import ServiceShutdownModal from './src/components/ServiceShutdownModal';
 import BootSplash from 'react-native-bootsplash';
 import {
   SafeAreaProvider,
@@ -75,8 +77,27 @@ const SPLASH_SCREEN_DELAY = 3000;
 
 const AppContent = (): React.JSX.Element => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showShutdownModal, setShowShutdownModal] = useState(true);
+  const [surveyCompleted, setSurveyCompleted] = useState(false);
   const routeNameRef = useRef<string | undefined>(undefined);
   const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    AsyncStorage.getItem('survey_completed').then(value => {
+      if (value === 'true') {
+        setSurveyCompleted(true);
+      }
+    });
+  }, []);
+
+  const handleSurveyCompleted = async () => {
+    await AsyncStorage.setItem('survey_completed', 'true');
+    setSurveyCompleted(true);
+  };
+
+  const handleShutdownDismiss = () => {
+    setShowShutdownModal(false);
+  };
 
   useEffect(() => {
     const unsubscribe = auth().onAuthStateChanged(user => {
@@ -186,6 +207,12 @@ const AppContent = (): React.JSX.Element => {
         ) : (
           <LoginScreen />
         )}
+        <ServiceShutdownModal
+          visible={showShutdownModal}
+          surveyCompleted={surveyCompleted}
+          onSurveyCompleted={handleSurveyCompleted}
+          onDismiss={handleShutdownDismiss}
+        />
         <Toast
           config={toastConfig}
           topOffset={insets.top + 60}
