@@ -34,3 +34,12 @@ Thumbs.db
 .turbo
 
 *.pem
+
+# Assets
+*.png
+*.jpg
+*.pdf
+*.heic
+
+# Database dumps
+*.dump
